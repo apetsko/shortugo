@@ -3,16 +3,23 @@ package handlers
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
-	"github.com/apetsko/shortugo/internal/storage"
 	"github.com/apetsko/shortugo/internal/utils"
+	"github.com/apetsko/shortugo/repositories"
 )
 
-var s storage.Storage = storage.NewInMem()
+type URLHandler struct {
+	Storage repositories.Storage
+}
 
-func ShortenURL(w http.ResponseWriter, r *http.Request) {
+func NewURLHandler(storage repositories.Storage) *URLHandler {
+	return &URLHandler{Storage: storage}
+}
+
+func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	body, err := io.ReadAll(r.Body)
@@ -27,21 +34,29 @@ func ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ID, err := s.Put(URL)
+	ID, err := h.Storage.Put(URL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	shortenURL, err := utils.FullURL(ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "%s", shortenURL)
 }
 
-func ExpandURL(w http.ResponseWriter, r *http.Request) {
+func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
 	ID := strings.TrimPrefix(r.URL.Path, "/")
-	URL, err := s.Get(ID)
+	URL, err := h.Storage.Get(ID)
 	if err != nil {
+		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 	w.Header().Set("Location", URL)
 	w.WriteHeader(http.StatusTemporaryRedirect)
