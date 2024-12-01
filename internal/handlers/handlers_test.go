@@ -78,7 +78,10 @@ func TestURLHandler_ExpandURL(t *testing.T) {
 			request := httptest.NewRequest(http.MethodGet, test.shortenURL, nil)
 			w := httptest.NewRecorder()
 			handler.ExpandURL(w, request)
+
 			res := w.Result()
+			defer res.Body.Close()
+
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.Location, res.Header.Get("Location"))
 		})
