@@ -3,7 +3,6 @@ package handlers
 import (
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strings"
 
@@ -54,7 +53,6 @@ func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
 	ID := strings.TrimPrefix(r.URL.Path, "/")
 	URL, err := h.Storage.Get(ID)
 	if err != nil {
-		log.Println(err.Error())
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
