@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
+	"github.com/apetsko/shortugo/internal/repositories"
 	"github.com/apetsko/shortugo/internal/utils"
-	"github.com/apetsko/shortugo/repositories"
 )
 
 type URLHandler struct {
@@ -50,7 +49,14 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
-	ID := strings.TrimPrefix(r.URL.Path, "/")
+	ctx := r.Context()
+
+	ID := ctx.Value("id").(string)
+	if len(ID) == 0 {
+		http.Error(w, http.StatusText(400), 400)
+		return
+	}
+
 	URL, err := h.Storage.Get(ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

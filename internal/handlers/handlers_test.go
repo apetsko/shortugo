@@ -13,7 +13,7 @@ import (
 )
 
 func TestURLHandler_ShortenURL(t *testing.T) {
-	handler := NewURLHandler(inmem.NewInMem())
+	handler := NewURLHandler(inmem.New())
 	type want struct {
 		ID   string
 		code int
@@ -52,7 +52,7 @@ func TestURLHandler_ShortenURL(t *testing.T) {
 }
 
 func TestURLHandler_ExpandURL(t *testing.T) {
-	storage := inmem.NewInMem()
+	storage := inmem.New()
 	handler := NewURLHandler(storage)
 	type want struct {
 		code     int

@@ -10,7 +10,7 @@ type InMemStorage struct {
 	data map[string]string
 }
 
-func NewInMem() *InMemStorage {
+func New() *InMemStorage {
 	return &InMemStorage{data: make(map[string]string)}
 }
 
