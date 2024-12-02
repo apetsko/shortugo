@@ -13,7 +13,6 @@ func Test_Generate(t *testing.T) {
 			t.Errorf("%q, %q := Generate(%s)", ID, err.Error(), u)
 		}
 	})
-	return
 }
 
 func Test_FullURL(t *testing.T) {
