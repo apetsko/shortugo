@@ -14,8 +14,8 @@ type config struct {
 func Parse() config {
 	c := new(config)
 
-	flag.StringVar(&c.Host, "Host", "localhost:8080", "network address with port")
-	flag.StringVar(&c.BaseURL, "BaseURL", "localhost:8080", "base url address")
+	flag.StringVar(&c.Host, "a", "localhost:8080", "network address with port")
+	flag.StringVar(&c.BaseURL, "b", "localhost:8080", "base url address")
 
 	flag.Parse()
 	if c.BaseURL == "" || c.Host == "" {
@@ -26,6 +26,3 @@ func Parse() config {
 	log.Println("cccccccccccccc", c)
 	return *c
 }
-
-
-
