@@ -9,8 +9,8 @@ import (
 )
 
 type config struct {
-	Host    string `env:"BASE_URL"`
-	BaseURL string `env:"SERVER_ADDRESS"`
+	Host    string `env:"SERVER_ADDRESS"`
+	BaseURL string `env:"BASE_URL"`
 }
 
 func Parse() config {
