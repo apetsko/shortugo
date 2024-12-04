@@ -13,7 +13,8 @@ import (
 )
 
 func TestURLHandler_ShortenURL(t *testing.T) {
-	handler := NewURLHandler(inmem.New())
+	u := "localhost:8080"
+	handler := NewURLHandler(u, inmem.New())
 	type want struct {
 		ID   string
 		code int
@@ -52,7 +53,8 @@ func TestURLHandler_ShortenURL(t *testing.T) {
 }
 
 func TestURLHandler_ExpandURL(t *testing.T) {
-	handler := NewURLHandler(inmem.New())
+	u := "localhost:8080"
+	handler := NewURLHandler(u, inmem.New())
 	type want struct {
 		code     int
 		Location string

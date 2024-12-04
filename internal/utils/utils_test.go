@@ -23,18 +23,36 @@ func Test_FullURL(t *testing.T) {
 	}
 
 	tests := []struct {
-		want want
-		id   string
+		want    want
+		baseURL string
+		id      string
 	}{
-		{want: want{"", errors.New("empty id"), true}, id: ""},
+		{want: want{"", errors.New("empty id"), true}, id: "", baseURL: "localhost:8080"},
 		{want: want{"http://localhost:8080/EwHXdJfB", nil, false}, id: "EwHXdJfB"},
 	}
 
 	for i, tt := range tests {
 		t.Run((fmt.Sprintf("%v", i)), func(t *testing.T) {
-			if URL, err := FullURL(tt.id); (err != nil) != tt.want.wantErr {
+			if URL, err := FullURL(tt.baseURL, tt.id); (err != nil) != tt.want.wantErr {
 				t.Errorf("%q, %q := FullUrl(%s)", URL, err.Error(), tt.id)
 			}
+		})
+	}
+}
+
+func TestSetBaseUrl(t *testing.T) {
+	type args struct {
+		u string
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			SetBaseUrl(tt.args.u)
 		})
 	}
 }

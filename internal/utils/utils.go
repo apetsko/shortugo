@@ -2,25 +2,25 @@ package utils
 
 import (
 	"errors"
-	"net/url"
-
-	"github.com/apetsko/shortugo/internal/config"
+	"fmt"
+	"log"
 )
+
+var baseURL string
+
+func SetBaseUrl(u string) {
+	baseURL = u
+	log.Println("Base URL set successfully")
+}
 
 func Generate(URL string) (ID string, err error) {
 	ID = "EwHXdJfB"
 	return
 }
 
-func FullURL(ID string) (string, error) {
+func FullURL(baseURL string, ID string) (string, error) {
 	if ID == "" {
 		return "", errors.New("empty id")
 	}
-	u := url.URL{
-		Scheme: "http",
-		Host:   config.Host,
-		Path:   ID,
-	}
-
-	return u.String(), nil
+	return fmt.Sprintf("http://%s/%s", baseURL, ID), nil
 }

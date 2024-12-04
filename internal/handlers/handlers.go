@@ -8,14 +8,20 @@ import (
 
 	"github.com/apetsko/shortugo/internal/repositories"
 	"github.com/apetsko/shortugo/internal/utils"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 type URLHandler struct {
+	baseURL string
 	storage repositories.Storage
 }
 
-func NewURLHandler(storage repositories.Storage) *URLHandler {
-	return &URLHandler{storage: storage}
+func NewURLHandler(base string, storage repositories.Storage) *URLHandler {
+	return &URLHandler{
+		baseURL: base,
+		storage: storage,
+	}
 }
 
 func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
@@ -39,12 +45,11 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortenURL, err := utils.FullURL(ID)
+	shortenURL, err := utils.FullURL(h.baseURL, ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-
 	w.WriteHeader(http.StatusCreated)
 	fmt.Fprintf(w, "%s", shortenURL)
 }
@@ -57,6 +62,22 @@ func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Location", URL)
+	w.Header().Add("Content-Type", "application/json")
+
 	w.WriteHeader(http.StatusTemporaryRedirect)
 	fmt.Fprintf(w, "%s", URL)
+}
+
+func SetupRouter(handler *URLHandler) *chi.Mux {
+	r := chi.NewRouter()
+
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+
+	r.Post("/", handler.ShortenURL)
+	r.Get("/{id}", handler.ExpandURL)
+
+	return r
 }
