@@ -40,7 +40,7 @@ func Test_FullURL(t *testing.T) {
 	}
 }
 
-func TestSetBaseUrl(t *testing.T) {
+func TestSetBaseURL(t *testing.T) {
 	type args struct {
 		u string
 	}
@@ -52,7 +52,7 @@ func TestSetBaseUrl(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			SetBaseUrl(tt.args.u)
+			SetBaseURL(tt.args.u)
 		})
 	}
 }

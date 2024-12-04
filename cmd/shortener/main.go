@@ -11,7 +11,7 @@ import (
 func main() {
 	cfg := config.Parse()
 
-	utils.SetBaseUrl(cfg.BaseURL)
+	utils.SetBaseURL(cfg.BaseURL)
 
 	storage := inmem.New()
 	handler := handlers.NewURLHandler(cfg.BaseURL, storage)

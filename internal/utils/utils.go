@@ -8,7 +8,7 @@ import (
 
 var baseURL string
 
-func SetBaseUrl(u string) {
+func SetBaseURL(u string) {
 	baseURL = u
 	log.Println("Base URL set successfully")
 }
