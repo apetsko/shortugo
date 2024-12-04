@@ -22,5 +22,5 @@ func FullURL(baseURL string, ID string) (string, error) {
 	if ID == "" {
 		return "", errors.New("empty id")
 	}
-	return fmt.Sprintf("http://%s/%s", baseURL, ID), nil
+	return fmt.Sprintf("%s/%s", baseURL, ID), nil
 }
