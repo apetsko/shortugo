@@ -18,7 +18,6 @@ func Parse() config {
 
 	if err := env.Parse(c); err == nil {
 		if c.BaseURL != "" && c.Host != "" {
-			fmt.Println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF")
 			return *c
 		}
 

@@ -75,7 +75,7 @@ func TestURLHandler_ExpandURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			handler.storage.Put(test.want.Location)
+			_, _ = handler.storage.Put(test.want.Location)
 			request := httptest.NewRequest(http.MethodGet, test.shortenURL, nil)
 			w := httptest.NewRecorder()
 			handler.ExpandURL(w, request)
