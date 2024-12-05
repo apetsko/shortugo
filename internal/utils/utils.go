@@ -3,7 +3,6 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"log"
 )
 
 func Generate(URL string) (ID string, err error) {
