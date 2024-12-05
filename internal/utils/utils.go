@@ -6,13 +6,6 @@ import (
 	"log"
 )
 
-var baseURL string
-
-func SetBaseUrl(u string) {
-	baseURL = u
-	log.Println("Base URL set successfully")
-}
-
 func Generate(URL string) (ID string, err error) {
 	ID = "EwHXdJfB"
 	return
