@@ -33,8 +33,8 @@ func Test_FullURL(t *testing.T) {
 
 	for i, tt := range tests {
 		t.Run((fmt.Sprintf("%v", i)), func(t *testing.T) {
-			if URL, err := FullUrl(tt.baseURL, tt.id); (err != nil) != tt.want.wantErr {
-				t.Errorf("%q, %q := FullUrl(%s)", URL, err.Error(), tt.id)
+			if URL, err := FullURL(tt.baseURL, tt.id); (err != nil) != tt.want.wantErr {
+				t.Errorf("%q, %q := FullURL(%s)", URL, err.Error(), tt.id)
 			}
 		})
 	}
