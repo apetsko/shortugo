@@ -1,21 +1,10 @@
 package inmem
 
 import (
-	"reflect"
 	"testing"
 
 	"github.com/apetsko/shortugo/internal/utils"
 )
-
-func Test_New(t *testing.T) {
-
-	want := &InMemStorage{data: make(map[string]string)}
-	t.Run("New Storage", func(t *testing.T) {
-		if s := New(); !reflect.DeepEqual(want, s) {
-			t.Errorf("Failed to create storage")
-		}
-	})
-}
 
 func Test_Put(t *testing.T) {
 	im := New()

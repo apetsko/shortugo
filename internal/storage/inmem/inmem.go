@@ -14,7 +14,7 @@ func New() *InMemStorage {
 	return &InMemStorage{data: make(map[string]string)}
 }
 
-func (im InMemStorage) Put(URL string) (ID string, err error) {
+func (im *InMemStorage) Put(URL string) (ID string, err error) {
 	if ID, err = utils.Generate(URL); err != nil {
 		return "", err
 	}
@@ -22,7 +22,7 @@ func (im InMemStorage) Put(URL string) (ID string, err error) {
 	return ID, nil
 }
 
-func (im InMemStorage) Get(ID string) (URL string, err error) {
+func (im *InMemStorage) Get(ID string) (URL string, err error) {
 	if URL, ok := im.data[ID]; ok {
 		return URL, nil
 	}
