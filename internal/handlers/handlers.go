@@ -45,7 +45,7 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortenURL, err := utils.FullURL(h.baseURL, ID)
+	shortenURL, err := utils.FullUrl(h.baseURL, ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

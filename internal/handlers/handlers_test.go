@@ -30,7 +30,7 @@ func TestURLHandler_ShortenURL(t *testing.T) {
 			want: want{
 
 				code: 201,
-				ID:   "http://localhost:8080/EwHXdJfB",
+				ID:   "http://localhost:8080/QrPnX5IU",
 			},
 		},
 	}

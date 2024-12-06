@@ -7,9 +7,16 @@ import (
 	"github.com/go-chi/chi/v5"
 )
 
-func StartServer(address string, router *chi.Mux) {
-	log.Printf("Starting server on %s", address)
-	if err := http.ListenAndServe(address, router); err != nil {
-		log.Fatalf("server error: %s", err.Error())
-	}
+type Server struct {
+	address string
+	router  *chi.Mux
+}
+
+func New(a string, r *chi.Mux) *Server {
+	return &Server{a, r}
+}
+
+func (s *Server) StartServer() error {
+	log.Printf("Starting server on %s", s.address)
+	return http.ListenAndServe(s.address, s.router)
 }
