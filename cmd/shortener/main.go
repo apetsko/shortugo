@@ -20,7 +20,7 @@ func main() {
 	handler := handlers.NewURLHandler(cfg.BaseURL, storage)
 	router := handlers.SetupRouter(handler)
 
-	server := server.New(cfg.BaseURL, router)
+	server := server.New(cfg.Host, router)
 	if err := server.StartServer(); err != nil {
 		log.Fatal(err)
 	}

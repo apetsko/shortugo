@@ -13,7 +13,7 @@ type Server struct {
 }
 
 func New(a string, r *chi.Mux) *Server {
-	return &Server{a, r}
+	return &Server{address: a, router: r}
 }
 
 func (s *Server) StartServer() error {

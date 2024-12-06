@@ -12,7 +12,7 @@ type Сonfig struct {
 }
 
 func Parse() (c Сonfig, err error) {
-	if err = env.Parse(c); err != nil {
+	if err = env.Parse(&c); err != nil {
 		return
 	}
 
