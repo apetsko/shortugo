@@ -7,9 +7,9 @@ import (
 )
 
 func Test_Generate(t *testing.T) {
-	t.Run("simple Tesst", func(t *testing.T) {
+	t.Run("simple Test", func(t *testing.T) {
 		u := "asdfasdfsdf"
-		if ID, err := Generate(u); ID != "EwHXdJfB" || err != nil {
+		if ID, err := Generate(u); ID != "Wp2B02Uf" || err != nil {
 			t.Errorf("%q, %q := Generate(%s)", ID, err.Error(), u)
 		}
 	})

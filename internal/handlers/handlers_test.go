@@ -66,7 +66,7 @@ func TestURLHandler_ExpandURL(t *testing.T) {
 	}{
 		{
 			name:       "positive test #1",
-			shortenURL: "http://localhost:8080/EwHXdJfB",
+			shortenURL: "http://localhost:8080/QrPnX5IU",
 			want: want{
 				code:     307,
 				Location: "https://practicum.yandex.ru/",

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -51,7 +50,7 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
-	fmt.Fprintf(w, "%s", shortenURL)
+	w.Write([]byte(shortenURL))
 }
 
 func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +64,7 @@ func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	w.WriteHeader(http.StatusTemporaryRedirect)
-	fmt.Fprintf(w, "%s", URL)
+	w.Write([]byte(URL))
 }
 
 func SetupRouter(handler *URLHandler) *chi.Mux {
