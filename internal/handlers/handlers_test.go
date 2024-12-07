@@ -61,12 +61,14 @@ func TestURLHandler_ExpandURL(t *testing.T) {
 	}
 	tests := []struct {
 		shortenURL string
+		id         string
 		name       string
 		want       want
 	}{
 		{
 			name:       "positive test #1",
 			shortenURL: "http://localhost:8080/QrPnX5IU",
+			id:         "QrPnX5IU",
 			want: want{
 				code:     307,
 				Location: "https://practicum.yandex.ru/",
@@ -75,7 +77,7 @@ func TestURLHandler_ExpandURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, _ = handler.storage.Put(test.want.Location)
+			_ = handler.storage.Put(test.id, test.want.Location)
 			request := httptest.NewRequest(http.MethodGet, test.shortenURL, nil)
 			w := httptest.NewRecorder()
 			handler.ExpandURL(w, request)

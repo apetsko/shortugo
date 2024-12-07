@@ -19,7 +19,7 @@ func Test_Put(t *testing.T) {
 	}
 	t.Run("test_put", func(t *testing.T) {
 
-		ID, _ := utils.Generate(test.URL)
+		ID := utils.Generate(test.URL)
 
 		im.data[ID] = test.URL
 

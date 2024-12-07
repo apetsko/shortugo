@@ -5,18 +5,22 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/apetsko/shortugo/internal/repositories"
 	"github.com/apetsko/shortugo/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-type URLHandler struct {
-	baseURL string
-	storage repositories.Storage
+type Storage interface {
+	Put(id string, url string) error
+	Get(id string) (url string, err error)
 }
 
-func NewURLHandler(base string, storage repositories.Storage) *URLHandler {
+type URLHandler struct {
+	baseURL string
+	storage Storage
+}
+
+func NewURLHandler(base string, storage Storage) *URLHandler {
 	return &URLHandler{
 		baseURL: base,
 		storage: storage,
@@ -38,23 +42,23 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ID, err := h.storage.Put(URL)
+	ID := utils.Generate(URL)
+
+	err = h.storage.Put(ID, URL)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	shortenURL, err := utils.FullURL(h.baseURL, ID)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	shortenURL := utils.FullURL(h.baseURL, ID)
+
 	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(shortenURL))
 }
 
 func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
 	ID := strings.TrimPrefix(r.URL.Path, "/")
+
 	URL, err := h.storage.Get(ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
