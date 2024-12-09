@@ -6,6 +6,7 @@ import (
 	"fmt"
 )
 
+
 func Generate(URL string) (ID string) {
 	hash := sha256.Sum256([]byte(URL))
 	ID = base64.RawURLEncoding.EncodeToString(hash[:6])

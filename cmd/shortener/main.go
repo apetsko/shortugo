@@ -10,10 +10,12 @@ import (
 )
 
 func main() {
+
 	cfg, err := config.Parse()
 	if err != nil {
 		log.Fatal(err)
 	}
+
 
 	storage := inmem.New()
 
