@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/apetsko/shortugo/internal/config"
 	"github.com/apetsko/shortugo/internal/handlers"
 	"github.com/apetsko/shortugo/internal/server"
@@ -8,11 +10,20 @@ import (
 )
 
 func main() {
-	cfg := config.Parse()
-	storage := inmem.New()
-	handler := handlers.NewURLHandler(cfg.BaseURL, storage)
 
+	cfg, err := config.Parse()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+
+	storage := inmem.New()
+
+	handler := handlers.NewURLHandler(cfg.BaseURL, storage)
 	router := handlers.SetupRouter(handler)
 
-	server.StartServer(cfg.Host, router)
+	server := server.New(cfg.Host, router)
+	if err := server.StartServer(); err != nil {
+		log.Fatal(err)
+	}
 }
