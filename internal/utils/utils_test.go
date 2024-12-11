@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
 var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -58,9 +60,11 @@ func Test_Generate(t *testing.T) {
 	for i, u := range urls {
 		t.Run(fmt.Sprintf("URL #%d", i), func(t *testing.T) {
 			ID := Generate(u)
-			if ur, ok := m[ID]; ok && ur != u {
-				t.Errorf("already has same ID %q with URL: %q, new URL: %q", ID, m[ID], u)
-			}
+
+			ur, ok := m[ID]
+			require.Equal(t, false, ok)
+			require.Equal(t, false, ur == u)
+
 			m[ID] = u
 		})
 	}
