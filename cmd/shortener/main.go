@@ -28,7 +28,7 @@ func main() {
 	router := handlers.SetupRouter(handler)
 
 	s := server.New(cfg.Host, router)
-	if err := s.StartServer(); err != nil {
+	if err := s.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }
