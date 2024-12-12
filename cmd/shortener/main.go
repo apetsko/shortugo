@@ -5,14 +5,21 @@ import (
 
 	"github.com/apetsko/shortugo/internal/config"
 	"github.com/apetsko/shortugo/internal/handlers"
+
+	zl "github.com/apetsko/shortugo/internal/log"
 	"github.com/apetsko/shortugo/internal/server"
 	"github.com/apetsko/shortugo/internal/storage/inmem"
 )
 
 func main() {
-	cfg, err := config.Parse()
+	err := zl.Start()
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	cfg, err := config.Parse()
+	if err != nil {
+		zl.Fatal(err.Error())
 	}
 
 	storage := inmem.New()
@@ -20,8 +27,8 @@ func main() {
 	handler := handlers.NewURLHandler(cfg.BaseURL, storage)
 	router := handlers.SetupRouter(handler)
 
-	server := server.New(cfg.Host, router)
-	if err := server.StartServer(); err != nil {
+	s := server.New(cfg.Host, router)
+	if err := s.StartServer(); err != nil {
 		log.Fatal(err)
 	}
 }
