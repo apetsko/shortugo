@@ -2,8 +2,6 @@ package inmem
 
 import (
 	"errors"
-
-	"github.com/apetsko/shortugo/internal/utils"
 )
 
 type InMemStorage struct {
@@ -14,17 +12,14 @@ func New() *InMemStorage {
 	return &InMemStorage{data: make(map[string]string)}
 }
 
-func (im InMemStorage) Put(URL string) (ID string, err error) {
-	if ID, err = utils.Generate(URL); err != nil {
-		return "", err
-	}
-	im.data[ID] = URL
-	return ID, nil
+func (im *InMemStorage) Put(id, url string) (err error) {
+	im.data[id] = url
+	return nil
 }
 
-func (im InMemStorage) Get(ID string) (URL string, err error) {
-	if URL, ok := im.data[ID]; ok {
-		return URL, nil
+func (im *InMemStorage) Get(id string) (url string, err error) {
+	if url, ok := im.data[id]; ok {
+		return url, nil
 	}
 	return "", errors.New("URL not found")
 }

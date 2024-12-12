@@ -1,41 +1,71 @@
 package utils
 
 import (
-	"errors"
 	"fmt"
+	"math/rand"
 	"testing"
+	"time"
+
+	"github.com/stretchr/testify/require"
 )
 
-func Test_Generate(t *testing.T) {
-	t.Run("simple Tesst", func(t *testing.T) {
-		u := "asdfasdfsdf"
-		if ID, err := Generate(u); ID != "EwHXdJfB" || err != nil {
-			t.Errorf("%q, %q := Generate(%s)", ID, err.Error(), u)
-		}
-	})
+var seededRand = rand.New(rand.NewSource(time.Now().UnixNano()))
+
+func generateURLS(count int) []string {
+
+	urls := make([]string, count)
+
+	protocols := []string{
+		"http://",
+		"https://",
+		"ftp://",
+		"ftps://",
+		"sftp://",
+		"mailto://",
+		"telnet://",
+		"file://",
+		"data://",
+		"ws://",
+		"wss://",
+		"bluetooth://",
+	}
+
+	for i := range urls {
+		u := fmt.Sprintf("%s%s.%s/%s/%s",
+			protocols[seededRand.Intn(len(protocols))], //protocol
+			randomString(seededRand.Intn(10)+1),        //2domain
+			randomString(seededRand.Intn(3)+2),         //1domain
+			randomString(seededRand.Intn(9)+2),         //path1
+			randomString(seededRand.Intn(13)+4),        //path2
+		)
+		urls[i] = u
+	}
+
+	return urls
 }
 
-func Test_FullURL(t *testing.T) {
-	type want struct {
-		URL     string
-		err     error
-		wantErr bool
-	}
+func randomString(lenght int) string {
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-	tests := []struct {
-		want    want
-		baseURL string
-		id      string
-	}{
-		{want: want{"", errors.New("empty id"), true}, id: "", baseURL: "localhost:8080"},
-		{want: want{"http://localhost:8080/EwHXdJfB", nil, false}, id: "EwHXdJfB"},
+	b := make([]byte, lenght)
+	for i := range b {
+		b[i] = charset[seededRand.Intn(len(charset))]
 	}
+	return string(b)
+}
 
-	for i, tt := range tests {
-		t.Run((fmt.Sprintf("%v", i)), func(t *testing.T) {
-			if URL, err := FullURL(tt.baseURL, tt.id); (err != nil) != tt.want.wantErr {
-				t.Errorf("%q, %q := FullUrl(%s)", URL, err.Error(), tt.id)
-			}
+func Test_Generate(t *testing.T) {
+	m := make(map[string]string)
+	urls := generateURLS(1000_000)
+	for i, u := range urls {
+		t.Run(fmt.Sprintf("URL #%d", i), func(t *testing.T) {
+			ID := Generate(u)
+
+			ur, ok := m[ID]
+			require.Equal(t, false, ok)
+			require.Equal(t, false, ur == u)
+
+			m[ID] = u
 		})
 	}
 }
