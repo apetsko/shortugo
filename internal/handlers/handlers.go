@@ -2,9 +2,12 @@ package handlers
 
 import (
 	"io"
+	"log"
 	"net/http"
 	"strings"
 
+	zl "github.com/apetsko/shortugo/internal/log"
+	mw "github.com/apetsko/shortugo/internal/middleware"
 	"github.com/apetsko/shortugo/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -53,7 +56,9 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	shortenURL := utils.FullURL(h.baseURL, ID)
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(shortenURL))
+	if _, err := w.Write([]byte(shortenURL)); err != nil {
+		zl.Fatal(err.Error())
+	}
 }
 
 func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
@@ -68,15 +73,18 @@ func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 
 	w.WriteHeader(http.StatusTemporaryRedirect)
-	w.Write([]byte(URL))
+	_, err = w.Write([]byte(URL))
+	if err != nil {
+		log.Println(err.Error())
+	}
 }
 
 func SetupRouter(handler *URLHandler) *chi.Mux {
 	r := chi.NewRouter()
 
+	r.Use(mw.WithLogging)
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
 	r.Post("/", handler.ShortenURL)
