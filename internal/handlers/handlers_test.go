@@ -129,6 +129,7 @@ func TestURLHandler_ShortenJSON(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			urljson, err := json.Marshal(test.URL)
+			require.NoError(t, err)
 			request := httptest.NewRequest(http.MethodPost, test.want.ID, bytes.NewBuffer(urljson))
 			w := httptest.NewRecorder()
 			handler.ShortenJSON(w, request)
