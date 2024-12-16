@@ -131,6 +131,7 @@ func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
 func SetupRouter(handler *URLHandler) *chi.Mux {
 	r := chi.NewRouter()
 
+	r.Use(mw.GzipMiddleware())
 	r.Use(mw.WithLogging(handler.logger))
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)

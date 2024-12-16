@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type Logger interface {
+type logger interface {
 	Info(message string, keysAndValues ...interface{})
 }
 
@@ -15,12 +15,12 @@ type responseData struct {
 }
 
 type loggingResponseWriter struct {
-	logger Logger
+	logger logger
 	http.ResponseWriter
 	responseData *responseData
 }
 
-func newLoggingResponseWriter(w http.ResponseWriter, logger Logger) *loggingResponseWriter {
+func newLoggingResponseWriter(w http.ResponseWriter, logger logger) *loggingResponseWriter {
 	return &loggingResponseWriter{
 		ResponseWriter: w,
 		logger:         logger,
@@ -39,7 +39,7 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode
 }
 
-func WithLogging(logger Logger) func(http.Handler) http.Handler {
+func WithLogging(logger logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		logFn := func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
