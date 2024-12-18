@@ -12,61 +12,113 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func decompressResponseBody(t *testing.T, body *bytes.Buffer) string {
-	reader, err := gzip.NewReader(body)
-	require.NoError(t, err, "Failed to create gzip reader")
+func decompressGzip(data []byte) (string, error) {
+	reader, err := gzip.NewReader(bytes.NewReader(data))
+	if err != nil {
+		return "", err
+	}
 	defer reader.Close()
 
-	responseBody, err := io.ReadAll(reader)
-	require.NoError(t, err, "Failed to read response body")
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, reader)
+	if err != nil {
+		return "", err
+	}
 
-	return string(responseBody)
+	return buf.String(), nil
 }
 
-func TestGzipMiddleware_ResponseCompression_JSON(t *testing.T) {
-	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func TestGzipMiddleware_JSON(t *testing.T) {
+
+	jsonHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"message": "Hello, JSON World!"}`))
+		w.Write([]byte(`{"message": "Hello, JSON!"}`))
 	})
 
-	handler := GzipMiddleware()(testHandler)
-
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/json", nil)
 	req.Header.Set("Accept-Encoding", "gzip")
 
-	rec := httptest.NewRecorder()
+	rr := httptest.NewRecorder()
+	handler := GzipMiddleware(jsonHandler)
 
-	var buf bytes.Buffer
-	rec.Body = &buf
+	handler.ServeHTTP(rr, req)
 
-	handler.ServeHTTP(rec, req)
+	res := rr.Result()
+	defer res.Body.Close()
 
-	assert.Equal(t, "gzip", rec.Header().Get("Content-Encoding"), "Expected Content-Encoding to be 'gzip'")
+	require.Equal(t, res.Header.Get("Content-Encoding"), "gzip")
 
-	responseBody := decompressResponseBody(t, &buf)
-	assert.Equal(t, `{"message": "Hello, JSON World!"}`, responseBody, "Response body mismatch")
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err, "Error reading response body")
+
+	expected := `{"message": "Hello, JSON!"}`
+	decompressed, err := decompressGzip(body)
+	require.NoError(t, err, "Failed to decompress response")
+	assert.Equal(t, expected, decompressed)
+
 }
 
-func TestGzipMiddleware_ResponseCompression_HTML(t *testing.T) {
-	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func TestGzipMiddleware_HTML(t *testing.T) {
+
+	htmlHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`<h1>Hello, HTML World!</h1>`))
+		w.Write([]byte("<html><body><h1>Hello, HTML!</h1></body></html>"))
 	})
 
-	handler := GzipMiddleware()(testHandler)
-
-	req := httptest.NewRequest("GET", "/", nil)
+	req := httptest.NewRequest(http.MethodGet, "/html", nil)
 	req.Header.Set("Accept-Encoding", "gzip")
 
-	rec := httptest.NewRecorder()
+	rr := httptest.NewRecorder()
+	handler := GzipMiddleware(htmlHandler)
 
-	var buf bytes.Buffer
-	rec.Body = &buf
+	handler.ServeHTTP(rr, req)
 
-	handler.ServeHTTP(rec, req)
+	res := rr.Result()
+	defer res.Body.Close()
 
-	assert.Equal(t, "gzip", rec.Header().Get("Content-Encoding"), "Expected Content-Encoding to be 'gzip'")
+	if res.Header.Get("Content-Encoding") != "gzip" {
+		t.Errorf("Expected Content-Encoding to be gzip, got %s", res.Header.Get("Content-Encoding"))
+	}
 
-	responseBody := decompressResponseBody(t, &buf)
-	assert.Equal(t, `<h1>Hello, HTML World!</h1>`, responseBody, "Response body mismatch")
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err, "Error reading response body")
+
+	expected := "<html><body><h1>Hello, HTML!</h1></body></html>"
+	decompressed, err := decompressGzip(body)
+	require.NoError(t, err, "Failed to decompress response")
+	assert.Equal(t, expected, decompressed)
+}
+
+func TestGzipMiddleware_Text(t *testing.T) {
+
+	textHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/plain")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("Hello, plain text!"))
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/text", nil)
+	req.Header.Set("Accept-Encoding", "gzip")
+
+	rr := httptest.NewRecorder()
+	handler := GzipMiddleware(textHandler)
+
+	handler.ServeHTTP(rr, req)
+
+	res := rr.Result()
+	defer res.Body.Close()
+
+	if res.Header.Get("Content-Encoding") == "gzip" {
+		t.Errorf("Expected no gzip encoding for text response")
+	}
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expected := "Hello, plain text!"
+	if string(body) != expected {
+		t.Errorf("Expected body %q, got %q", expected, string(body))
+	}
 }
