@@ -18,7 +18,6 @@ type bufferedResponseWriter struct {
 
 func (w *bufferedResponseWriter) WriteHeader(code int) {
 	w.statusCode = code
-	// w.ResponseWriter.WriteHeader(code)
 }
 
 func (w *bufferedResponseWriter) Write(b []byte) (int, error) {
@@ -53,7 +52,6 @@ func (cr *compressReader) Close() error {
 
 func GzipMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
 			cr, err := newCompressReader(r.Body)
 			if err != nil {
@@ -74,28 +72,24 @@ func GzipMiddleware(next http.Handler) http.Handler {
 			ResponseWriter: w,
 			buffer:         buf,
 		}
-		//разобраться как менять статускод
+
 		next.ServeHTTP(bufferedWriter, r)
 
 		contentType := bufferedWriter.ResponseWriter.Header().Get("Content-Type")
 		if strings.Contains(contentType, "application/json") || strings.Contains(contentType, "text/html") {
-			zlogger.Info("JSON")
+			bufferedWriter.ResponseWriter.Header().Add("Content-Encoding", "gzip")
+			bufferedWriter.ResponseWriter.WriteHeader(bufferedWriter.statusCode)
 
-			bufferedWriter.ResponseWriter.Header().Set("Content-Encoding", "gzip")
-			bufferedWriter.ResponseWriter.Header().Set("Content-Type", "applicationывыаваы/json")
-			bufferedWriter.WriteHeader(333)
 			gz := gzip.NewWriter(bufferedWriter.ResponseWriter)
-
 			defer gz.Close()
 
-			if _, err := gz.Write(buf.Bytes()); err != nil {
+			if _, err := gz.Write(bufferedWriter.buffer.Bytes()); err != nil {
 				zlogger.Error("Failed to compress response: " + err.Error())
 				http.Error(bufferedWriter.ResponseWriter, "Failed to compress response", http.StatusInternalServerError)
 				return
 			}
 		} else {
-
-			if _, err := w.Write(buf.Bytes()); err != nil {
+			if _, err := w.Write(bufferedWriter.buffer.Bytes()); err != nil {
 				zlogger.Error("Failed to write response: " + err.Error())
 			}
 		}
