@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -61,7 +62,7 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	shortenURL := utils.FullURL(h.baseURL, ID)
+	shortenURL := fmt.Sprintf("%s/%s", h.baseURL, ID)
 
 	w.WriteHeader(http.StatusCreated)
 	if _, err := w.Write([]byte(shortenURL)); err != nil {
@@ -101,10 +102,11 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var resp models.Response
-	resp.Result = utils.FullURL(h.baseURL, ID)
+	resp.Result = fmt.Sprintf("%s/%s", h.baseURL, ID)
 
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
+
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		h.logger.Error(err.Error())
 	}
