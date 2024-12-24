@@ -104,14 +104,20 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 
 	ID := utils.Generate(req.URL)
 
-	err = h.storage.Put(ID, req.URL)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	var resp models.Response
-	resp.Result = fmt.Sprintf("%s/%s", h.baseURL, ID)
+
+	resp.Result, err = h.storage.Get(ID)
+	if err != nil {
+		if !errors.Is(err, storage.ErrNotFound) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err = h.storage.Put(ID, req.URL); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		resp.Result = fmt.Sprintf("%s/%s", h.baseURL, ID)
+	}
 
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -124,6 +130,7 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
 	ID := strings.TrimPrefix(r.URL.Path, "/")
 
+	fmt.Println(ID)
 	URL, err := h.storage.Get(ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
