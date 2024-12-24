@@ -7,8 +7,9 @@ import (
 )
 
 type Сonfig struct {
-	Host    string `env:"SERVER_ADDRESS"`
-	BaseURL string `env:"BASE_URL"`
+	Host            string `env:"SERVER_ADDRESS"`
+	BaseURL         string `env:"BASE_URL"`
+	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 }
 
 func Parse() (c Сonfig, err error) {
@@ -16,12 +17,13 @@ func Parse() (c Сonfig, err error) {
 		return
 	}
 
-	if c.BaseURL != "" && c.Host != "" {
+	if c.BaseURL != "" && c.Host != "" && c.FileStoragePath != "" {
 		return
 	}
 
 	flag.StringVar(&c.Host, "a", "localhost:8080", "network address with port")
 	flag.StringVar(&c.BaseURL, "b", "http://localhost:8080", "base url address")
+	flag.StringVar(&c.FileStoragePath, "f", "db.json", "file storage name")
 	flag.Parse()
 
 	return c, nil
