@@ -35,11 +35,11 @@ type URLHandler struct {
 	logger  Logger
 }
 
-func NewURLHandler(base string, storage Storage, logger Logger) *URLHandler {
+func NewURLHandler(b string, s Storage, l Logger) *URLHandler {
 	return &URLHandler{
-		baseURL: base,
-		storage: storage,
-		logger:  logger,
+		baseURL: b,
+		storage: s,
+		logger:  l,
 	}
 }
 
