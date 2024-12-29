@@ -28,6 +28,10 @@ func ShortenURL(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ID, err := s.Put(URL)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
+	
 	shortenURL, err := utils.FullURL(ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
