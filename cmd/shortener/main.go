@@ -26,8 +26,9 @@ func main() {
 
 	handler := handlers.NewURLHandler(cfg.BaseURL, storage, zlogger)
 	router := handlers.SetupRouter(handler)
-
 	s := server.New(cfg.Host, router)
+
+	zlogger.Info("running server on " + cfg.Host)
 	if err := s.ListenAndServe(); err != nil {
 		zlogger.Fatal(err.Error())
 	}
