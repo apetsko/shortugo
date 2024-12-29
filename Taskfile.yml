@@ -54,3 +54,14 @@ tasks:
     cmds:
       - golangci-lint run --config .golangci.yml
     silent: true
+  build:
+    desc: build project
+    cmds:
+      - cd ./cmd/shortener && go build -o shortener.exe
+      - echo "Doner"
+    silent: true
+  run:
+    desc: run project
+    cmds:
+      - cd ./cmd/shortener && go run .
+    silent: true
