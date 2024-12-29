@@ -103,6 +103,7 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	var resp models.Response
 	resp.Result = utils.FullURL(h.baseURL, ID)
 
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		h.logger.Error(err.Error())
