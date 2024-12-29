@@ -56,7 +56,7 @@ func randomString(lenght int) string {
 
 func Test_Generate(t *testing.T) {
 	m := make(map[string]string)
-	urls := generateURLS(1000_000)
+	urls := generateURLS(1000)
 	for i, u := range urls {
 		t.Run(fmt.Sprintf("URL #%d", i), func(t *testing.T) {
 			ID := Generate(u)

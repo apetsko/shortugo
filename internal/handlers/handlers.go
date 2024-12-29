@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -9,10 +10,13 @@ import (
 
 	mw "github.com/apetsko/shortugo/internal/middleware"
 	"github.com/apetsko/shortugo/internal/models"
+	"github.com/apetsko/shortugo/internal/storage"
 	"github.com/apetsko/shortugo/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
+
+var ErrNotFound = errors.New("not found")
 
 type Logger interface {
 	Info(message string, keysAndValues ...interface{})
@@ -56,13 +60,18 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	ID := utils.Generate(URL)
 
-	err = h.storage.Put(ID, URL)
+	shortenURL, err := h.storage.Get(ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		if !errors.Is(err, storage.ErrNotFound) {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		if err = h.storage.Put(ID, URL); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		shortenURL = fmt.Sprintf("%s/%s", h.baseURL, ID)
 	}
-
-	shortenURL := fmt.Sprintf("%s/%s", h.baseURL, ID)
 
 	w.WriteHeader(http.StatusCreated)
 	if _, err := w.Write([]byte(shortenURL)); err != nil {
