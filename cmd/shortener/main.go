@@ -22,8 +22,10 @@ func main() {
 		zlogger.Fatal(err.Error())
 	}
 
-	// storage := inmem.New()
 	storage, err := infile.New(cfg.FileStoragePath)
+	if err != nil {
+		zlogger.Fatal(err.Error())
+	}
 
 	handler := handlers.NewURLHandler(cfg.BaseURL, storage, zlogger)
 	router := handlers.SetupRouter(handler)
