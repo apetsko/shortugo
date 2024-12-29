@@ -4,17 +4,18 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 
 	"github.com/apetsko/shortugo/internal/repositories"
 	"github.com/apetsko/shortugo/internal/utils"
 )
 
 type URLHandler struct {
-	Storage repositories.Storage
+	storage repositories.Storage
 }
 
 func NewURLHandler(storage repositories.Storage) *URLHandler {
-	return &URLHandler{Storage: storage}
+	return &URLHandler{storage: storage}
 }
 
 func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
@@ -32,7 +33,7 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ID, err := h.Storage.Put(URL)
+	ID, err := h.storage.Put(URL)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -49,15 +50,8 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	ID := ctx.Value("id").(string)
-	if len(ID) == 0 {
-		http.Error(w, http.StatusText(400), 400)
-		return
-	}
-
-	URL, err := h.Storage.Get(ID)
+	ID := strings.TrimPrefix(r.URL.Path, "/")
+	URL, err := h.storage.Get(ID)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return

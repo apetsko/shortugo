@@ -52,8 +52,7 @@ func TestURLHandler_ShortenURL(t *testing.T) {
 }
 
 func TestURLHandler_ExpandURL(t *testing.T) {
-	storage := inmem.New()
-	handler := NewURLHandler(storage)
+	handler := NewURLHandler(inmem.New())
 	type want struct {
 		code     int
 		Location string
@@ -74,7 +73,7 @@ func TestURLHandler_ExpandURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			storage.Put(test.want.Location)
+			handler.storage.Put(test.want.Location)
 			request := httptest.NewRequest(http.MethodGet, test.shortenURL, nil)
 			w := httptest.NewRecorder()
 			handler.ExpandURL(w, request)
