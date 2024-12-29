@@ -51,6 +51,7 @@ linters-settings:
     allow-unused: false
     require-explanation: true
     require-specific: true
+
   staticcheck:
     checks: ["all"]
   stylecheck:
@@ -123,8 +124,9 @@ issues:
 run:
   concurrency: 4
   timeout: 2m
-  issues-exit-code: 0
+  tests: false
 
 output:
   formats:
-    - format: colored-tab
+    - format: tab
+      path: stderr
