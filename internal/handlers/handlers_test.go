@@ -109,8 +109,9 @@ func TestURLHandler_ShortenJSON(t *testing.T) {
 	u := "http://localhost:8080"
 	handler := NewURLHandler(u, inmem.New(), logger)
 	type want struct {
-		ID   string
-		code int
+		ID          string
+		code        int
+		ContentType string
 	}
 	tests := []struct {
 		name string
@@ -121,14 +122,16 @@ func TestURLHandler_ShortenJSON(t *testing.T) {
 			name: "positive test #1",
 			URL:  models.Request{URL: "https://practicum.yandex.ru/"},
 			want: want{
-				code: 201,
-				ID:   "http://localhost:8080/QrPnX5IU",
+				code:        201,
+				ID:          "http://localhost:8080/QrPnX5IU",
+				ContentType: "application/json",
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			urljson, err := json.Marshal(test.URL)
+			require.NoError(t, err)
 			request := httptest.NewRequest(http.MethodPost, test.want.ID, bytes.NewBuffer(urljson))
 			w := httptest.NewRecorder()
 			handler.ShortenJSON(w, request)
@@ -144,6 +147,7 @@ func TestURLHandler_ShortenJSON(t *testing.T) {
 			err = json.Unmarshal(b, &resp)
 			require.NoError(t, err)
 
+			assert.Equal(t, test.want.ContentType, res.Header.Get("Content-Type"))
 			assert.Equal(t, test.want.ID, resp.Result)
 		})
 	}

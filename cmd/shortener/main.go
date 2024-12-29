@@ -12,7 +12,6 @@ import (
 )
 
 func main() {
-
 	logger, err := logging.NewZapLogger()
 	if err != nil {
 		log.Fatal("Failed to initialize logger:", err)

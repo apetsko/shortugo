@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"encoding/json"
-	"errors"
 	"io"
 	"net/http"
 	"strings"
@@ -82,8 +81,7 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	var req models.Request
 
 	err = json.Unmarshal(body, &req)
-	if err == nil {
-		err = errors.New("test err")
+	if err != nil {
 		h.logger.Info("Error unmarshaling request body", "error", err.Error())
 		http.Error(w, "", http.StatusBadRequest)
 		return
@@ -105,6 +103,7 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	var resp models.Response
 	resp.Result = utils.FullURL(h.baseURL, ID)
 
+	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		h.logger.Error(err.Error())
@@ -138,7 +137,7 @@ func SetupRouter(handler *URLHandler) *chi.Mux {
 	r.Use(middleware.Recoverer)
 
 	r.Post("/", handler.ShortenURL)
-	r.Post("/api/shorten/", handler.ShortenJSON)
+	r.Post("/api/shorten", handler.ShortenJSON)
 	r.Get("/{id}", handler.ExpandURL)
 
 	return r
