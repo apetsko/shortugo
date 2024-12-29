@@ -86,7 +86,6 @@ func Test_Get(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("test_put #%d", i), func(t *testing.T) {
-
 			u, err := im.Get(test.ID)
 			require.NoError(t, err)
 			assert.Equal(t, u, test.URL)

@@ -20,19 +20,25 @@ func decompressGzip(data []byte) (string, error) {
 	defer reader.Close()
 
 	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, reader)
-	if err != nil {
-		return "", err
+
+	for {
+		_, err := io.CopyN(buf, reader, 1024)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return "", err
+		}
 	}
 
 	return buf.String(), nil
 }
 
 func TestGzipMiddleware_JSON(t *testing.T) {
-
 	jsonHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"message": "Hello, JSON!"}`))
+		_, err := w.Write([]byte(`{"message": "Hello, JSON!"}`))
+		require.NoError(t, err, "error write test response")
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/json", nil)
@@ -55,14 +61,13 @@ func TestGzipMiddleware_JSON(t *testing.T) {
 	decompressed, err := decompressGzip(body)
 	require.NoError(t, err, "Failed to decompress response")
 	assert.Equal(t, expected, decompressed)
-
 }
 
 func TestGzipMiddleware_HTML(t *testing.T) {
-
 	htmlHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte("<html><body><h1>Hello, HTML!</h1></body></html>"))
+		_, err := w.Write([]byte("<html><body><h1>Hello, HTML!</h1></body></html>"))
+		require.NoError(t, err, "error write test response")
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/html", nil)
@@ -90,16 +95,14 @@ func TestGzipMiddleware_HTML(t *testing.T) {
 }
 
 func TestGzipMiddleware_Text(t *testing.T) {
-
 	textHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("Hello, plain text!"))
+		_, err := w.Write([]byte("Hello, plain text!"))
+		require.NoError(t, err, "error write test response")
 	})
-
 	req := httptest.NewRequest(http.MethodGet, "/text", nil)
 	req.Header.Set("Accept-Encoding", "gzip")
-
 	rr := httptest.NewRecorder()
 	handler := GzipMiddleware(textHandler)
 
