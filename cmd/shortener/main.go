@@ -12,23 +12,23 @@ import (
 )
 
 func main() {
-	logger, err := logging.NewZapLogger()
+	zlogger, err := logging.NewZapLogger()
 	if err != nil {
 		log.Fatal("Failed to initialize logger:", err)
 	}
 
 	cfg, err := config.Parse()
 	if err != nil {
-		logger.Fatal(err.Error())
+		zlogger.Fatal(err.Error())
 	}
 
 	storage := inmem.New()
 
-	handler := handlers.NewURLHandler(cfg.BaseURL, storage, logger)
+	handler := handlers.NewURLHandler(cfg.BaseURL, storage, zlogger)
 	router := handlers.SetupRouter(handler)
 
 	s := server.New(cfg.Host, router)
 	if err := s.ListenAndServe(); err != nil {
-		logger.Fatal(err.Error())
+		zlogger.Fatal(err.Error())
 	}
 }

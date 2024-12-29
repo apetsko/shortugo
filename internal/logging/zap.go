@@ -1,23 +1,33 @@
 package logging
 
 import (
+	"sync"
+
 	"go.uber.org/zap"
 )
 
-// ZapLogger — конкретная реализация Logger, использующая zap
 type ZapLogger struct {
 	log *zap.SugaredLogger
 }
 
-// NewZapLogger создаёт новый экземпляр ZapLogger
+var instance *ZapLogger
+var once sync.Once
+
 func NewZapLogger() (*ZapLogger, error) {
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		return nil, err
-	}
-	return &ZapLogger{
-		log: logger.Sugar(),
-	}, nil
+	var err error
+
+	once.Do(func() {
+		logger, e := zap.NewDevelopment()
+		if e != nil {
+			err = e
+			return
+		}
+		instance = &ZapLogger{
+			log: logger.Sugar(),
+		}
+	})
+
+	return instance, err
 }
 
 func (l *ZapLogger) Info(message string, keysAndValues ...interface{}) {
