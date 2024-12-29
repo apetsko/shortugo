@@ -89,6 +89,7 @@ func GzipMiddleware(next http.Handler) http.Handler {
 				return
 			}
 		} else {
+			w.WriteHeader(bufferedWriter.statusCode)
 			if _, err := w.Write(bufferedWriter.buffer.Bytes()); err != nil {
 				zlogger.Error("Failed to write response: " + err.Error())
 			}
