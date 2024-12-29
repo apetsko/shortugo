@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	zl "github.com/apetsko/shortugo/internal/log"
 	mw "github.com/apetsko/shortugo/internal/middleware"
 	"github.com/apetsko/shortugo/internal/utils"
 	"github.com/go-chi/chi/v5"
@@ -55,7 +56,9 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	shortenURL := utils.FullURL(h.baseURL, ID)
 
 	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(shortenURL))
+	if _, err := w.Write([]byte(shortenURL)); err != nil {
+		zl.Fatal(err.Error())
+	}
 }
 
 func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
