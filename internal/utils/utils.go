@@ -14,7 +14,7 @@ func Generate(URL string) (ID string, err error) {
 
 func FullURL(ID string) (string, error) {
 	if ID == "" {
-		return "", errors.New("Empty ID")
+		return "", errors.New("empty id")
 	}
 	u := url.URL{
 		Scheme: "http",

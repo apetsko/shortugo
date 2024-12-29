@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -75,14 +74,14 @@ func TestURLHandler_ExpandURL(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			id, _ := storage.Put(test.want.Location)
-			log.Println(id, test.want.Location)
-			u, _ := storage.Get(id)
-			log.Println("uuuuuuu", u)
+			storage.Put(test.want.Location)
 			request := httptest.NewRequest(http.MethodGet, test.shortenURL, nil)
 			w := httptest.NewRecorder()
 			handler.ExpandURL(w, request)
+
 			res := w.Result()
+			defer res.Body.Close()
+
 			assert.Equal(t, test.want.code, res.StatusCode)
 			assert.Equal(t, test.want.Location, res.Header.Get("Location"))
 		})
