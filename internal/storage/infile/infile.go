@@ -64,6 +64,7 @@ func (f *InFileStorage) Get(id string) (string, error) {
 	if _, err := f.file.Seek(0, 0); err != nil {
 		return "", fmt.Errorf("error setting file seek: %w", err)
 	}
+	f.scanner = bufio.NewScanner(f.file)
 	for f.scanner.Scan() {
 		data := f.scanner.Bytes()
 
