@@ -1,65 +1,66 @@
 package middleware
 
 import (
-	"fmt"
 	"net/http"
 	"time"
-
-	zl "github.com/apetsko/shortugo/internal/log"
 )
 
-type (
-	responseData struct {
-		status int
-		size   int
-	}
+type Logger interface {
+	Info(message string, keysAndValues ...interface{})
+}
 
-	loggingResponseWriter struct {
-		http.ResponseWriter
-		responseData *responseData
+type responseData struct {
+	status int
+	size   int
+}
+
+type loggingResponseWriter struct {
+	logger Logger
+	http.ResponseWriter
+	responseData *responseData
+}
+
+func newLoggingResponseWriter(w http.ResponseWriter, logger Logger) *loggingResponseWriter {
+	return &loggingResponseWriter{
+		ResponseWriter: w,
+		logger:         logger,
+		responseData:   &responseData{},
 	}
-)
+}
 
 func (r *loggingResponseWriter) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
-	r.responseData.size += size // захватываем размер
+	r.responseData.size += size
 	return size, err
 }
 
 func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
-	r.responseData.status = statusCode // захватываем код статуса
+	r.responseData.status = statusCode
 }
 
-func WithLogging(h http.Handler) http.Handler {
-	logFn := func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		uri := r.RequestURI
-		method := r.Method
+func WithLogging(logger Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		logFn := func(w http.ResponseWriter, r *http.Request) {
+			start := time.Now()
+			uri := r.RequestURI
+			method := r.Method
 
-		responseData := &responseData{
-			status: 0,
-			size:   0,
+			lw := newLoggingResponseWriter(w, logger)
+
+			next.ServeHTTP(lw, r)
+			duration := time.Since(start)
+
+			lw.logger.Info(
+				"middleware logger",
+				"uri", uri,
+				"method", method,
+				"status", lw.responseData.status,
+				"duration", duration.Nanoseconds(),
+				"size", lw.responseData.size,
+			)
 		}
 
-		lw := loggingResponseWriter{
-			ResponseWriter: w,
-			responseData:   responseData,
-		}
-
-		h.ServeHTTP(&lw, r)
-		duration := time.Since(start)
-		fmt.Println(duration.Microseconds())
-
-		zl.Info(
-			"middleware logger",
-			"uri", uri,
-			"method", method,
-			"status", responseData.status,
-			"duration", duration.Nanoseconds(),
-			"size", responseData.size,
-		)
+		return http.HandlerFunc(logFn)
 	}
-
-	return http.HandlerFunc(logFn)
 }
