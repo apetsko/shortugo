@@ -15,7 +15,7 @@ func TestParse(t *testing.T) {
 	}{
 		{
 			name:    "OK",
-			wantC:   Сonfig{Host: "localhost:8080", BaseURL: "http://localhost:8080"},
+			wantC:   Сonfig{Host: "localhost:8080", BaseURL: "http://localhost:8080", FileStoragePath: "db.json"},
 			wantErr: false,
 		},
 	}

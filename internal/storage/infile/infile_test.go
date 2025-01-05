@@ -1,4 +1,4 @@
-package inmem
+package infile
 
 import (
 	"fmt"
@@ -9,7 +9,8 @@ import (
 )
 
 func Test_Put(t *testing.T) {
-	im := New()
+	ifile, err := New("db_test.json")
+	require.NoError(t, err)
 
 	tests := []struct {
 		URL string
@@ -33,35 +34,19 @@ func Test_Put(t *testing.T) {
 	}
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("test_put #%d", i), func(t *testing.T) {
-			err := im.Put(test.ID, test.URL)
+			err := ifile.Put(test.ID, test.URL)
 			require.NoError(t, err)
 
-			v, ok := im.data[test.ID]
-			require.Equal(t, ok, true)
+			v, err := ifile.Get(test.ID)
+			require.NoError(t, err)
 			assert.Equal(t, v, test.URL)
 		})
 	}
 }
 
 func Test_Get(t *testing.T) {
-	im := New()
-	im.data = map[string]string{
-		"EVvMeswX": "mailto://EBlI.LUcE/nGW/CnKgralWM",
-		"zrWsrYVK": "data://bNZlqPkX.zPr/AOYjayx/RXDZywCjbH",
-		"WrBTersI": "ftps://QhPSk.SERo/ASOuRTdh/XuXCUVcR",
-		"IZBF3Drj": "http://hwr.DqhY/qRpylA/BrBUqXwraQX",
-		"B-_ig72W": "file://rSX.gQs/AoJCRUFJbS/HbkVkdDhHkSakU",
-		"ih4UOFRN": "file://c.Hh/Oo/cAWXXgykO",
-		"CnhlRf81": "http://rfcv.yZ/djwBnRy/GRvWfxKARJXqiIS",
-		"oSyiotBD": "sftp://zvJXD.xR/lUTNLwCMuL/ACaRzHI",
-		"7la40tTW": "ws://SAZCfOUSn.qxaU/tj/TIdK",
-		"7HVUuC38": "file://IyZL.go/YfaSpOpqhN/XfWd",
-		"_QDwIZ8V": "telnet://npLzsEwn.KTR/XLv/gYhEqqdTTCUdpEjE",
-		"JJd8nofa": "ftps://PlqcUsANz.fn/wpSOrY/NVHIDGTbCVUSL",
-		"SVKhwBjn": "file://WLCHVIgAk.Nc/gAqCVuw/GBZaquHPx",
-		"jzLEbSpd": "bluetooth://qtuD.eT/OugB/XeohyIVkj",
-		"UrqyUbm_": "file://hya.jrqF/smmqgM/GJeaDJOYx",
-	}
+	ifile, err := New("db_test.json")
+	require.NoError(t, err)
 
 	tests := []struct {
 		URL string
@@ -86,7 +71,7 @@ func Test_Get(t *testing.T) {
 
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("test_put #%d", i), func(t *testing.T) {
-			u, err := im.Get(test.ID)
+			u, err := ifile.Get(test.ID)
 			require.NoError(t, err)
 			assert.Equal(t, u, test.URL)
 		})
