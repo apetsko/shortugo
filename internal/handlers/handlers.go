@@ -11,7 +11,8 @@ import (
 	"github.com/apetsko/shortugo/internal/logging"
 	mw "github.com/apetsko/shortugo/internal/middleware"
 	"github.com/apetsko/shortugo/internal/models"
-	"github.com/apetsko/shortugo/internal/storage"
+	"github.com/apetsko/shortugo/internal/storage/shared"
+
 	"github.com/apetsko/shortugo/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -22,6 +23,8 @@ var ErrNotFound = errors.New("not found")
 type Storage interface {
 	Put(id string, url string) error
 	Get(id string) (url string, err error)
+	Close() error
+	Ping() error
 }
 
 type URLHandler struct {
@@ -57,7 +60,7 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	shortenURL, err := h.storage.Get(ID)
 	if err != nil {
-		if !errors.Is(err, storage.ErrNotFound) {
+		if !errors.Is(err, shared.ErrNotFound) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
@@ -101,18 +104,11 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 
 	var resp models.Response
 
-	resp.Result, err = h.storage.Get(ID)
-	if err != nil {
-		if !errors.Is(err, storage.ErrNotFound) {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		if err = h.storage.Put(ID, req.URL); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		resp.Result = fmt.Sprintf("%s/%s", h.baseURL, ID)
+	if err = h.storage.Put(ID, req.URL); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
+	resp.Result = fmt.Sprintf("%s/%s", h.baseURL, ID)
 
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
@@ -140,6 +136,15 @@ func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (h *URLHandler) PingDB(w http.ResponseWriter, r *http.Request) {
+	err := h.storage.Ping()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
 func SetupRouter(handler *URLHandler) *chi.Mux {
 	r := chi.NewRouter()
 
@@ -152,6 +157,7 @@ func SetupRouter(handler *URLHandler) *chi.Mux {
 	r.Post("/", handler.ShortenURL)
 	r.Post("/api/shorten", handler.ShortenJSON)
 	r.Get("/{id}", handler.ExpandURL)
+	r.Get("/ping", handler.PingDB)
 
 	return r
 }

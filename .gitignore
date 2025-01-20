@@ -24,3 +24,4 @@ vendor/
 makefile
 golangci-lint
 *.json
+shortenertest

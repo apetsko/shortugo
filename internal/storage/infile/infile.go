@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/apetsko/shortugo/internal/storage"
+	"github.com/apetsko/shortugo/internal/storage/shared"
 )
 
 const FilePermUserRWGroupROthersR = 0644
@@ -19,7 +19,6 @@ type InFileStorage struct {
 }
 
 type Link struct {
-	UUID        string `json:"uuid"`
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
@@ -33,7 +32,6 @@ func New(filename string) (*InFileStorage, error) {
 	return &InFileStorage{
 		file:    f,
 		encoder: json.NewEncoder(f),
-		uuid:    nextUUID(),
 		scanner: bufio.NewScanner(f),
 	}, nil
 }
@@ -42,10 +40,9 @@ func (f *InFileStorage) Close() error {
 	return f.file.Close()
 }
 
-func (f *InFileStorage) Put(id, url string) (err error) {
+func (f *InFileStorage) Put(shortURL, url string) (err error) {
 	l := Link{
-		UUID:        f.uuid(),
-		ShortURL:    id,
+		ShortURL:    shortURL,
 		OriginalURL: url,
 	}
 
@@ -60,7 +57,7 @@ func (f *InFileStorage) Put(id, url string) (err error) {
 	return nil
 }
 
-func (f *InFileStorage) Get(id string) (string, error) {
+func (f *InFileStorage) Get(shortURL string) (string, error) {
 	if _, err := f.file.Seek(0, 0); err != nil {
 		return "", fmt.Errorf("error setting file seek: %w", err)
 	}
@@ -74,7 +71,7 @@ func (f *InFileStorage) Get(id string) (string, error) {
 			return "", err
 		}
 
-		if l.ShortURL == id {
+		if l.ShortURL == shortURL {
 			return l.OriginalURL, nil
 		}
 	}
@@ -83,13 +80,9 @@ func (f *InFileStorage) Get(id string) (string, error) {
 		return "", fmt.Errorf("error reading file: %w", err)
 	}
 
-	return "", fmt.Errorf("URL not found: %s. %w", id, storage.ErrNotFound)
+	return "", fmt.Errorf("URL not found: %s. %w", shortURL, shared.ErrNotFound)
 }
 
-func nextUUID() func() string {
-	count := 0
-	return func() string {
-		count++
-		return fmt.Sprintf("%d", count)
-	}
+func (f *InFileStorage) Ping() error {
+	return nil
 }

@@ -9,11 +9,28 @@ tasks:
   build:
     desc: build project
     cmds:
-      - cd ./cmd/shortener && go build -o shortener.exe
+      - cd ./cmd/shortener && go build -o shortener
       - echo "Doner"
     silent: true
   run:
     desc: run project
     cmds:
-      - cd ./cmd/shortener && go run .
+      - cd ./cmd/shortener && go run main.go -d="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
     silent: true
+
+  test:
+    desc: build and run tests
+    deps: 
+      - build
+    cmds:
+      - ./shortenertest -test.v -test.run=^TestIteration1$ -binary-path=cmd/shortener/shortener -source-path="." -server-port=8080 
+      - ./shortenertest -test.v -test.run=^TestIteration2$ -binary-path=cmd/shortener/shortener -source-path="." -server-port=8080 -file-storage-path="db.json"
+      - ./shortenertest -test.v -test.run=^TestIteration3$ -binary-path=cmd/shortener/shortener -source-path="." -server-port=8080 -file-storage-path="db.json"
+      - ./shortenertest -test.v -test.run=^TestIteration4$ -binary-path=cmd/shortener/shortener -source-path="." -server-port=8080 -file-storage-path="db.json"
+      - ./shortenertest -test.v -test.run=^TestIteration5$ -binary-path=cmd/shortener/shortener -source-path="." -server-port=8080 -file-storage-path="db.json"
+      - ./shortenertest -test.v -test.run=^TestIteration6$ -binary-path=cmd/shortener/shortener -source-path="." -server-port=8080 -file-storage-path="db.json"
+      - ./shortenertest -test.v -test.run=^TestIteration7$ -binary-path=cmd/shortener/shortener -source-path="." -server-port=8080 -file-storage-path="db.json"
+      - ./shortenertest -test.v -test.run=^TestIteration8$ -binary-path=cmd/shortener/shortener -source-path="." -server-port=8080 -file-storage-path="db.json"
+      - ./shortenertest -test.v -test.run=^TestIteration9$ -binary-path=cmd/shortener/shortener -source-path="." -server-port=8080 -file-storage-path="db.json"
+      - ./shortenertest -test.v -test.run=^TestIteration10$ -binary-path=cmd/shortener/shortener -source-path="." -database-dsn="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
+      - ./shortenertest -test.v -test.run=^TestIteration11$ -binary-path=cmd/shortener/shortener -source-path="." -database-dsn="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
