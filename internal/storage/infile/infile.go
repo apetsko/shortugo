@@ -2,54 +2,50 @@ package infile
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
 
-	"github.com/apetsko/shortugo/internal/storage"
+	"github.com/apetsko/shortugo/internal/models"
+	"github.com/apetsko/shortugo/internal/storage/shared"
 )
 
 const FilePermUserRWGroupROthersR = 0644
 
-type InFileStorage struct {
+type Storage struct {
 	file    *os.File
 	encoder *json.Encoder
 	scanner *bufio.Scanner
-	uuid    func() string
 }
 
-type Link struct {
-	UUID        string `json:"uuid"`
-	ShortURL    string `json:"short_url"`
-	OriginalURL string `json:"original_url"`
-}
-
-func New(filename string) (*InFileStorage, error) {
+func New(filename string) (*Storage, error) {
 	f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, FilePermUserRWGroupROthersR)
 	if err != nil {
 		return nil, err
 	}
 
-	return &InFileStorage{
+	return &Storage{
 		file:    f,
 		encoder: json.NewEncoder(f),
-		uuid:    nextUUID(),
 		scanner: bufio.NewScanner(f),
 	}, nil
 }
 
-func (f *InFileStorage) Close() error {
+func (f *Storage) Close() error {
 	return f.file.Close()
 }
 
-func (f *InFileStorage) Put(id, url string) (err error) {
-	l := Link{
-		UUID:        f.uuid(),
-		ShortURL:    id,
-		OriginalURL: url,
+func (f *Storage) Put(ctx context.Context, r models.URLRecord) (err error) {
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 
-	if err := f.encoder.Encode(l); err != nil {
+	if err := f.encoder.Encode(r); err != nil {
+		return err
+	}
+
+	if err := ctx.Err(); err != nil {
 		return err
 	}
 
@@ -57,25 +53,64 @@ func (f *InFileStorage) Put(id, url string) (err error) {
 		return fmt.Errorf("error sync file: %w", err)
 	}
 
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
-func (f *InFileStorage) Get(id string) (string, error) {
+func (f *Storage) PutBatch(ctx context.Context, rr []models.URLRecord) (err error) {
+	for _, r := range rr {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		if err := f.encoder.Encode(r); err != nil {
+			return err
+		}
+
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		if err := f.file.Sync(); err != nil {
+			return fmt.Errorf("error sync file: %w", err)
+		}
+	}
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (f *Storage) Get(ctx context.Context, shortURL string) (string, error) {
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
+
 	if _, err := f.file.Seek(0, 0); err != nil {
 		return "", fmt.Errorf("error setting file seek: %w", err)
 	}
+
 	f.scanner = bufio.NewScanner(f.file)
 	for f.scanner.Scan() {
 		data := f.scanner.Bytes()
 
-		l := &Link{}
-		err := json.Unmarshal(data, l)
+		r := new(models.URLRecord)
+		err := json.Unmarshal(data, r)
 		if err != nil {
 			return "", err
 		}
 
-		if l.ShortURL == id {
-			return l.OriginalURL, nil
+		if err := ctx.Err(); err != nil {
+			return "", err
+		}
+
+		if r.ID == shortURL {
+			return r.URL, nil
 		}
 	}
 
@@ -83,13 +118,9 @@ func (f *InFileStorage) Get(id string) (string, error) {
 		return "", fmt.Errorf("error reading file: %w", err)
 	}
 
-	return "", fmt.Errorf("URL not found: %s. %w", id, storage.ErrNotFound)
+	return "", fmt.Errorf("URL not found: %s. %w", shortURL, shared.ErrNotFound)
 }
 
-func nextUUID() func() string {
-	count := 0
-	return func() string {
-		count++
-		return fmt.Sprintf("%d", count)
-	}
+func (f *Storage) Ping() error {
+	return nil
 }

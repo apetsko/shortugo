@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"log"
@@ -26,6 +27,7 @@ func initLogger() *logging.ZapLogger {
 	}
 	return logger
 }
+
 func TestURLHandler_ShortenURL(t *testing.T) {
 	u := "http://localhost:8080"
 	handler := NewURLHandler(u, inmem.New(), logger)
@@ -42,7 +44,6 @@ func TestURLHandler_ShortenURL(t *testing.T) {
 			name: "positive test #1",
 			URL:  "https://practicum.yandex.ru/",
 			want: want{
-
 				code: 201,
 				ID:   "http://localhost:8080/QrPnX5IU",
 			},
@@ -72,27 +73,27 @@ func TestURLHandler_ExpandURL(t *testing.T) {
 	type want struct {
 		code     int
 		Location string
+		URL      string
 	}
 	tests := []struct {
-		shortenURL string
-		id         string
-		name       string
-		want       want
+		name   string
+		record models.URLRecord
+		want   want
 	}{
 		{
-			name:       "positive test #1",
-			shortenURL: "http://localhost:8080/QrPnX5IU",
-			id:         "QrPnX5IU",
+			name:   "positive test #1",
+			record: models.URLRecord{ID: "QrPnX5IU", URL: "https://practicum.yandex.ru/"},
 			want: want{
 				code:     307,
 				Location: "https://practicum.yandex.ru/",
+				URL:      "http://localhost:8080/QrPnX5IU",
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_ = handler.storage.Put(test.id, test.want.Location)
-			request := httptest.NewRequest(http.MethodGet, test.shortenURL, nil)
+			_ = handler.storage.Put(context.Background(), test.record)
+			request := httptest.NewRequest(http.MethodGet, test.want.URL, nil)
 			w := httptest.NewRecorder()
 			handler.ExpandURL(w, request)
 
@@ -114,13 +115,13 @@ func TestURLHandler_ShortenJSON(t *testing.T) {
 		ContentType string
 	}
 	tests := []struct {
-		name string
-		URL  models.Request
-		want want
+		name   string
+		record models.URLRecord
+		want   want
 	}{
 		{
-			name: "positive test #1",
-			URL:  models.Request{URL: "https://practicum.yandex.ru/"},
+			name:   "positive test #1",
+			record: models.URLRecord{URL: "https://practicum.yandex.ru/"},
 			want: want{
 				code:        201,
 				ID:          "http://localhost:8080/QrPnX5IU",
@@ -130,9 +131,9 @@ func TestURLHandler_ShortenJSON(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			urljson, err := json.Marshal(test.URL)
+			url, err := json.Marshal(test.record)
 			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, test.want.ID, bytes.NewBuffer(urljson))
+			request := httptest.NewRequest(http.MethodPost, test.want.ID, bytes.NewBuffer(url))
 			w := httptest.NewRecorder()
 			handler.ShortenJSON(w, request)
 			res := w.Result()
@@ -143,7 +144,7 @@ func TestURLHandler_ShortenJSON(t *testing.T) {
 			b, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
 
-			var resp models.Response
+			var resp models.Result
 			err = json.Unmarshal(b, &resp)
 			require.NoError(t, err)
 

@@ -8,7 +8,6 @@ import (
 
 	"github.com/apetsko/shortugo/internal/logging"
 	"github.com/apetsko/shortugo/internal/server"
-	"github.com/apetsko/shortugo/internal/storage/infile"
 )
 
 func main() {
@@ -22,10 +21,12 @@ func main() {
 		zlogger.Fatal(err.Error())
 	}
 
-	storage, err := infile.New(cfg.FileStoragePath)
+	var storage handlers.Storage
+	storage, err = cfg.Storage(zlogger)
 	if err != nil {
 		zlogger.Fatal(err.Error())
 	}
+	defer storage.Close()
 
 	handler := handlers.NewURLHandler(cfg.BaseURL, storage, zlogger)
 	router := handlers.SetupRouter(handler)
