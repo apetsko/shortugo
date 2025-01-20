@@ -10,12 +10,12 @@ import (
 func TestParse(t *testing.T) {
 	tests := []struct {
 		name    string
-		wantC   Сonfig
+		wantC   Config
 		wantErr bool
 	}{
 		{
 			name:    "OK",
-			wantC:   Сonfig{Host: "localhost:8080", BaseURL: "http://localhost:8080", FileStoragePath: "db.json"},
+			wantC:   Config{Host: "localhost:8080", BaseURL: "http://localhost:8080", FileStoragePath: "db.json"},
 			wantErr: false,
 		},
 	}
