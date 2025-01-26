@@ -121,6 +121,11 @@ func (f *Storage) Get(ctx context.Context, shortURL string) (string, error) {
 	return "", fmt.Errorf("URL not found: %s. %w", shortURL, shared.ErrNotFound)
 }
 
+func (f *Storage) GetByUserID(ctx context.Context, userID string) (rr []models.URLRecord, err error) {
+
+	return nil, nil
+}
+
 func (f *Storage) Ping() error {
 	return nil
 }

@@ -13,7 +13,6 @@ import (
 	mw "github.com/apetsko/shortugo/internal/middleware"
 	"github.com/apetsko/shortugo/internal/models"
 	"github.com/apetsko/shortugo/internal/storages/shared"
-
 	"github.com/apetsko/shortugo/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -23,6 +22,7 @@ type Storage interface {
 	Put(ctx context.Context, r models.URLRecord) error
 	PutBatch(ctx context.Context, rr []models.URLRecord) error
 	Get(ctx context.Context, id string) (url string, err error)
+	GetByUserID(ctx context.Context, userID string) (rr []models.URLRecord, err error)
 	Ping() error
 	Close() error
 }
@@ -30,14 +30,16 @@ type Storage interface {
 type URLHandler struct {
 	baseURL string
 	storage Storage
+	secret  string
 	logger  *logging.ZapLogger
 }
 
-func NewURLHandler(b string, s Storage, l *logging.ZapLogger) *URLHandler {
+func NewURLHandler(baseURL string, s Storage, l *logging.ZapLogger, secret string) *URLHandler {
 	return &URLHandler{
-		baseURL: b,
+		baseURL: baseURL,
 		storage: s,
 		logger:  l,
+		secret:  secret,
 	}
 }
 
@@ -56,9 +58,10 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	IDlen := 6
 	record := models.URLRecord{
 		URL: url,
-		ID:  utils.Generate(url),
+		ID:  utils.GenerateID(url, IDlen),
 	}
 
 	ctx := r.Context()
@@ -117,8 +120,8 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Empty URL", http.StatusBadRequest)
 		return
 	}
-
-	record.ID = utils.Generate(record.URL)
+	IDlen := 6
+	record.ID = utils.GenerateID(record.URL, IDlen)
 
 	var resp models.Result
 
@@ -195,7 +198,8 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 
 		var record models.URLRecord
 		record.URL = req.OriginalURL
-		record.ID = utils.Generate(record.URL)
+		IDlen := 6
+		record.ID = utils.GenerateID(record.URL, IDlen)
 
 		records = append(records, record)
 
@@ -214,6 +218,35 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(resps); err != nil {
+		h.logger.Error(err.Error())
+	}
+}
+
+func (h *URLHandler) AllUserURLs(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value("userID").(string)
+	if !ok {
+		http.Error(w, "User ID not found", http.StatusUnauthorized)
+		return
+	}
+
+	fmt.Println("FROM ALLUSERS", userID)
+	w.WriteHeader(http.StatusOK)
+	return
+
+	//TODO достать все записи пользователя во всех сторажах
+	ID := "123123"
+	ctx := r.Context()
+	URL, err := h.storage.Get(ctx, ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.Header().Set("Location", URL)
+	w.Header().Add("Content-Type", "application/json")
+
+	w.WriteHeader(http.StatusTemporaryRedirect)
+	_, err = w.Write([]byte(URL))
+	if err != nil {
 		h.logger.Error(err.Error())
 	}
 }
@@ -252,12 +285,14 @@ func SetupRouter(handler *URLHandler) *chi.Mux {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
-	r.Use(mw.WithLogging(handler.logger))
+	r.Use(mw.LoggingMiddleware(handler.logger))
 	r.Use(mw.GzipMiddleware(handler.logger))
+	r.Use(mw.AuthMiddleware(handler.secret, handler.logger))
 
 	r.Post("/", handler.ShortenURL)
 	r.Post("/api/shorten", handler.ShortenJSON)
 	r.Post("/api/shorten/batch", handler.ShortenBatchJSON)
+	r.Get("/api/user/urls", handler.AllUserURLs)
 	r.Get("/{id}", handler.ExpandURL)
 	r.Get("/ping", handler.PingDB)
 

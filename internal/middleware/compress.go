@@ -48,7 +48,7 @@ func (cr *compressReader) Close() error {
 	return cr.zr.Close()
 }
 
-func GzipMiddleware(zlogger *logging.ZapLogger) func(http.Handler) http.Handler {
+func GzipMiddleware(logger *logging.ZapLogger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		gzipWithLogger := func(w http.ResponseWriter, r *http.Request) {
 			if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {
@@ -83,14 +83,14 @@ func GzipMiddleware(zlogger *logging.ZapLogger) func(http.Handler) http.Handler 
 				defer gz.Close()
 
 				if _, err := gz.Write(bufferedWriter.buffer.Bytes()); err != nil {
-					zlogger.Error("Failed to compress response: " + err.Error())
+					logger.Error("Failed to compress response: " + err.Error())
 					http.Error(bufferedWriter.ResponseWriter, "Failed to compress response", http.StatusInternalServerError)
 					return
 				}
 			} else {
 				w.WriteHeader(bufferedWriter.statusCode)
 				if _, err := w.Write(bufferedWriter.buffer.Bytes()); err != nil {
-					zlogger.Error("Failed to write response: " + err.Error())
+					logger.Error("Failed to write response: " + err.Error())
 				}
 			}
 		}
