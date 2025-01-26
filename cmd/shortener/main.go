@@ -35,7 +35,7 @@ func main() {
 		}
 	}(storage)
 
-	handler := handlers.NewURLHandler(cfg.BaseURL, storage, logger)
+	handler := handlers.NewURLHandler(cfg.BaseURL, storage, logger, cfg.Secret)
 	router := handlers.SetupRouter(handler)
 	s := server.New(cfg.Host, router)
 

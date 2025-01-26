@@ -64,7 +64,8 @@ func Test_Generate(t *testing.T) {
 	urls := generateURLS(1000)
 	for i, u := range urls {
 		t.Run(fmt.Sprintf("URL #%d", i), func(t *testing.T) {
-			ID := Generate(u)
+			IDlen := 6
+			ID := GenerateID(u, IDlen)
 
 			ur, ok := m[ID]
 			require.Equal(t, false, ok)

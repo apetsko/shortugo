@@ -12,6 +12,7 @@ type Config struct {
 	BaseURL         string `env:"BASE_URL"`
 	FileStoragePath string `env:"FILE_STORAGE_PATH"`
 	DatabaseDSN     string `env:"DATABASE_DSN"`
+	Secret          string `env:"SECRET"`
 }
 
 func Parse() (c Config, err error) {
@@ -19,12 +20,12 @@ func Parse() (c Config, err error) {
 	flag.StringVar(&c.BaseURL, "b", "http://localhost:8080", "base url address")
 	flag.StringVar(&c.FileStoragePath, "f", "db.json", "file storages name")
 	flag.StringVar(&c.DatabaseDSN, "d", "", "database DSN")
+	flag.StringVar(&c.Secret, "s", "fortytwo", "HMAC secret")
 
 	flag.Parse()
 
 	if err = env.Parse(&c); err != nil {
 		return c, fmt.Errorf("error while parse envs: %w", err)
 	}
-
 	return c, nil
 }

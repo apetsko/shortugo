@@ -116,6 +116,11 @@ func (p *Storage) Get(ctx context.Context, id string) (url string, err error) {
 	return url, nil
 }
 
+func (p *Storage) GetByUserID(ctx context.Context, userID string) (rr []models.URLRecord, err error) {
+
+	return nil, nil
+}
+
 func (p *Storage) Ping() error {
 	return p.pool.Ping(context.Background())
 }

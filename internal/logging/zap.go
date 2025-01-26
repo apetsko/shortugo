@@ -5,30 +5,34 @@ import (
 )
 
 type ZapLogger struct {
-	log *zap.SugaredLogger
+	*zap.SugaredLogger
 }
 
 func NewZapLogger() (*ZapLogger, error) {
-	var err error
-	logger, e := zap.NewDevelopment()
-	if e != nil {
-		err = e
+	config := zap.NewDevelopmentConfig()
+	config.EncoderConfig.TimeKey = "timestamp"
+	config.EncoderConfig.StacktraceKey = ""
+	config.Level.SetLevel(zap.DebugLevel)
+
+	logger, err := config.Build()
+	if err != nil {
 		return nil, err
 	}
-	instance := &ZapLogger{
-		log: logger.Sugar(),
-	}
-	return instance, err
+	return &ZapLogger{logger.Sugar()}, nil
+}
+
+func (l *ZapLogger) Close() error {
+	return l.Sync()
 }
 
 func (l *ZapLogger) Info(message string, keysAndValues ...interface{}) {
-	l.log.Infow(message, keysAndValues...)
+	l.Infow(message, keysAndValues...)
 }
 
 func (l *ZapLogger) Error(message string, keysAndValues ...interface{}) {
-	l.log.Errorw(message, keysAndValues...)
+	l.Errorw(message, keysAndValues...)
 }
 
 func (l *ZapLogger) Fatal(message string, keysAndValues ...interface{}) {
-	l.log.Fatalw(message, keysAndValues...)
+	l.Fatalw(message, keysAndValues...)
 }
