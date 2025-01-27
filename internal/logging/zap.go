@@ -14,7 +14,7 @@ func NewZapLogger() (*ZapLogger, error) {
 	config.EncoderConfig.StacktraceKey = ""
 	config.Level.SetLevel(zap.DebugLevel)
 
-	logger, err := config.Build()
+	logger, err := config.Build(zap.AddCaller(), zap.AddCallerSkip(1)) // Добавляем AddCaller и сдвиг
 	if err != nil {
 		return nil, err
 	}

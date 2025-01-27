@@ -22,7 +22,7 @@ type Storage interface {
 	Put(ctx context.Context, r models.URLRecord) error
 	PutBatch(ctx context.Context, rr []models.URLRecord) error
 	Get(ctx context.Context, id string) (url string, err error)
-	GetByUserID(ctx context.Context, userID string) (rr []models.URLRecord, err error)
+	GetLinksByUserID(ctx context.Context, baseURL, userID string) (rr []models.URLRecord, err error)
 	Ping() error
 	Close() error
 }
@@ -63,6 +63,8 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		URL: url,
 		ID:  utils.GenerateID(url, IDlen),
 	}
+	userID := r.Context().Value("userID").(string)
+	record.UserID = userID
 
 	ctx := r.Context()
 
@@ -122,6 +124,9 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	}
 	IDlen := 6
 	record.ID = utils.GenerateID(record.URL, IDlen)
+
+	userID := r.Context().Value("userID").(string)
+	record.UserID = userID
 
 	var resp models.Result
 
@@ -184,6 +189,8 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 
 	var resps []models.BatchResponse
 	var records []models.URLRecord
+	userID := r.Context().Value("userID").(string)
+
 	for _, req := range reqs {
 		var resp models.BatchResponse
 
@@ -200,6 +207,7 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 		record.URL = req.OriginalURL
 		IDlen := 6
 		record.ID = utils.GenerateID(record.URL, IDlen)
+		record.UserID = userID
 
 		records = append(records, record)
 
@@ -228,24 +236,32 @@ func (h *URLHandler) AllUserURLs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "User ID not found", http.StatusUnauthorized)
 		return
 	}
-
-	fmt.Println("FROM ALLUSERS", userID)
-	w.WriteHeader(http.StatusOK)
-	return
-
-	//TODO достать все записи пользователя во всех сторажах
-	ID := "123123"
 	ctx := r.Context()
-	URL, err := h.storage.Get(ctx, ID)
+	records, err := h.storage.GetLinksByUserID(ctx, userID, h.baseURL)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		if errors.Is(err, shared.ErrNotFound) {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Location", URL)
+	var userURLs = make([]models.UserURL, 0, len(records))
+	for _, record := range records {
+		userURLs = append(userURLs, models.UserURL{
+			ShortURL:    record.ID,
+			OriginalURL: record.URL,
+		})
+	}
+
+	resp, err := json.Marshal(userURLs)
+	if err != nil {
+		h.logger.Error(err.Error())
+	}
+
 	w.Header().Add("Content-Type", "application/json")
 
-	w.WriteHeader(http.StatusTemporaryRedirect)
-	_, err = w.Write([]byte(URL))
+	_, err = w.Write(resp)
 	if err != nil {
 		h.logger.Error(err.Error())
 	}
