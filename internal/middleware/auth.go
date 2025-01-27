@@ -48,8 +48,8 @@ func getUserIDFromCookie(cookie *http.Cookie, sc *securecookie.SecureCookie) (st
 }
 
 func WithUserID(ctx context.Context, uid string) context.Context {
-	usrid := models.UserID("UserID")
-	return context.WithValue(ctx, usrid, uid)
+	userid := models.UserID("UserID")
+	return context.WithValue(ctx, userid, uid)
 }
 
 func AuthMiddleware(secret string, logger *logging.ZapLogger) func(http.Handler) http.Handler {

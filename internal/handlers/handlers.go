@@ -63,7 +63,10 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		URL: url,
 		ID:  utils.GenerateID(url, IDlen),
 	}
-	userID := r.Context().Value("userID").(string)
+	userID, ok := r.Context().Value(models.UserID("userID")).(string)
+	if !ok || userID == "" {
+		userID = "0"
+	}
 	record.UserID = userID
 
 	ctx := r.Context()
@@ -125,7 +128,8 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	IDlen := 6
 	record.ID = utils.GenerateID(record.URL, IDlen)
 
-	userID := r.Context().Value("userID").(string)
+	userID := r.Context().Value(models.UserID("userID")).(string)
+
 	record.UserID = userID
 
 	var resp models.Result
@@ -144,8 +148,8 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		resp.Result = fmt.Sprintf("%s/%s", h.baseURL, record.ID)
 
+		resp.Result = fmt.Sprintf("%s/%s", h.baseURL, record.ID)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
@@ -154,9 +158,9 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if url != "" {
+		resp.Result = fmt.Sprintf("%s/%s", h.baseURL, record.ID)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusConflict)
-		resp.Result = fmt.Sprintf("%s/%s", h.baseURL, record.ID)
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			h.logger.Error(err.Error())
 		}
@@ -174,7 +178,8 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		h.logger.Info("Error unmarshaling request body", "error", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -183,13 +188,13 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(body, &reqs)
 	if err != nil {
 		h.logger.Info("Error unmarshaling request body", "error", err.Error())
-		http.Error(w, "", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	var resps []models.BatchResponse
 	var records []models.URLRecord
-	userID := r.Context().Value("userID").(string)
+	userID := r.Context().Value(models.UserID("userID")).(string)
 
 	for _, req := range reqs {
 		var resp models.BatchResponse
@@ -231,11 +236,8 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *URLHandler) AllUserURLs(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value("userID").(string)
-	if !ok {
-		http.Error(w, "User ID not found", http.StatusUnauthorized)
-		return
-	}
+	userID := r.Context().Value(models.UserID("userID")).(string)
+
 	ctx := r.Context()
 	records, err := h.storage.GetLinksByUserID(ctx, userID, h.baseURL)
 	if err != nil {
@@ -260,7 +262,7 @@ func (h *URLHandler) AllUserURLs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Add("Content-Type", "application/json")
-
+	w.WriteHeader(http.StatusOK)
 	_, err = w.Write(resp)
 	if err != nil {
 		h.logger.Error(err.Error())
@@ -273,11 +275,12 @@ func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	URL, err := h.storage.Get(ctx, ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		h.logger.Error(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Location", URL)
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Add("Content-Type", "text/html")
 
 	w.WriteHeader(http.StatusTemporaryRedirect)
 	_, err = w.Write([]byte(URL))
