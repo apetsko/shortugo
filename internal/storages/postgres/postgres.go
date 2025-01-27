@@ -60,12 +60,12 @@ func (p *Storage) Close() error {
 
 func (p *Storage) Put(ctx context.Context, r models.URLRecord) error {
 	const insert = `
-	INSERT INTO urls (id, url, date)
-	VALUES ($1, $2, $3)
+	INSERT INTO urls (id, url,userid, date )
+	VALUES ($1, $2, $3, $4)
 	ON CONFLICT (id)
 	DO UPDATE SET date = EXCLUDED.date;`
 
-	_, err := p.pool.Exec(ctx, insert, r.ID, r.URL, time.Now().Format(time.RFC3339))
+	_, err := p.pool.Exec(ctx, insert, r.ID, r.URL, r.UserID, time.Now().Format(time.RFC3339))
 	if err != nil {
 		return fmt.Errorf("failed to insert URL: %w", err)
 	}
@@ -75,14 +75,14 @@ func (p *Storage) Put(ctx context.Context, r models.URLRecord) error {
 
 func (p *Storage) PutBatch(ctx context.Context, rr []models.URLRecord) error {
 	const insertBatch = `
-	INSERT INTO urls (id, url, date)
-	VALUES ($1, $2, $3)
+	INSERT INTO urls (id, url, userid, date)
+	VALUES ($1, $2, $3, $4)
 	ON CONFLICT (id)
 	DO UPDATE SET date = EXCLUDED.date;`
 
 	batch := new(pgx.Batch)
 	for _, r := range rr {
-		batch.Queue(insertBatch, r.ID, r.URL, time.Now().Format(time.RFC3339))
+		batch.Queue(insertBatch, r.ID, r.URL, r.UserID, time.Now().Format(time.RFC3339))
 	}
 	br := p.pool.SendBatch(ctx, batch)
 	defer br.Close()
@@ -114,6 +114,43 @@ func (p *Storage) Get(ctx context.Context, id string) (url string, err error) {
 	}
 
 	return url, nil
+}
+
+func (p *Storage) GetLinksByUserID(ctx context.Context, userID, baseURL string) (rr []models.URLRecord, err error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	const query = "SELECT id, url, userid  FROM urls WHERE userid=$1"
+
+	rows, err := p.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var record models.URLRecord
+		if err := rows.Scan(&record.ID, &record.URL, &record.UserID); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		record.ID = fmt.Sprintf("%s/%s", baseURL, record.ID)
+		rr = append(rr, record)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over rows: %w", err)
+	}
+
+	if len(rr) == 0 {
+		return nil, fmt.Errorf("urls not found for userid: %s. %w", userID, shared.ErrNotFound)
+	}
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	return rr, nil
 }
 
 func (p *Storage) Ping() error {

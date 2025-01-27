@@ -39,28 +39,24 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 	r.responseData.status = statusCode
 }
 
-func WithLogging(logger logger) func(http.Handler) http.Handler {
+func LoggingMiddleware(logger logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		logFn := func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
-			uri := r.RequestURI
-			method := r.Method
 
 			lw := newLoggingResponseWriter(w, logger)
 
 			next.ServeHTTP(lw, r)
-			duration := time.Since(start)
 
 			lw.logger.Info(
 				"middleware logger",
-				"uri", uri,
-				"method", method,
+				"uri", r.RequestURI,
+				"method", r.Method,
 				"status", lw.responseData.status,
-				"duration", duration.Nanoseconds(),
+				"duration", time.Since(start).Nanoseconds(),
 				"size", lw.responseData.size,
 			)
 		}
-
 		return http.HandlerFunc(logFn)
 	}
 }
