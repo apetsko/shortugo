@@ -9,11 +9,15 @@ import (
 )
 
 type Storage struct {
-	data map[string]string
+	byID     map[string]models.URLRecord
+	byUserID map[string][]models.URLRecord
 }
 
 func New() *Storage {
-	return &Storage{data: make(map[string]string)}
+	return &Storage{
+		byID:     make(map[string]models.URLRecord),
+		byUserID: make(map[string][]models.URLRecord),
+	}
 }
 
 func (im *Storage) Put(ctx context.Context, r models.URLRecord) (err error) {
@@ -21,9 +25,10 @@ func (im *Storage) Put(ctx context.Context, r models.URLRecord) (err error) {
 	case <-ctx.Done():
 		return ctx.Err()
 	default:
-		im.data[r.ID] = r.URL
-	}
 
+		im.byID[r.ID] = r
+		im.byUserID[r.UserID] = append(im.byUserID[r.UserID], r)
+	}
 	return nil
 }
 
@@ -33,7 +38,9 @@ func (im *Storage) PutBatch(ctx context.Context, rr []models.URLRecord) (err err
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			im.data[r.ID] = r.URL
+
+			im.byID[r.ID] = r
+			im.byUserID[r.UserID] = append(im.byUserID[r.UserID], r)
 		}
 	}
 	return nil
@@ -44,11 +51,26 @@ func (im *Storage) Get(ctx context.Context, shortURL string) (url string, err er
 	case <-ctx.Done():
 		return "", ctx.Err()
 	default:
-		if url, ok := im.data[shortURL]; ok {
-			return url, nil
+		if rec, ok := im.byID[shortURL]; ok {
+			return rec.URL, nil
 		}
 	}
 	return "", fmt.Errorf("URL not found: %s. %w", shortURL, shared.ErrNotFound)
+}
+
+func (im *Storage) GetLinksByUserID(ctx context.Context, baseURL, userID string) (rr []models.URLRecord, err error) {
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	default:
+		if recs, ok := im.byUserID[userID]; ok {
+			for i := range recs {
+				recs[i].ID = fmt.Sprintf("%s/%s", baseURL, recs[i].ID)
+			}
+			return recs, nil
+		}
+	}
+	return nil, fmt.Errorf("URL not found: %s. %w", userID, shared.ErrNotFound)
 }
 
 func (im *Storage) Ping() error {
