@@ -58,15 +58,17 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	IDlen := 6
+	IDlen := 8
 	record := models.URLRecord{
 		URL: url,
 		ID:  utils.GenerateID(url, IDlen),
 	}
-	userID, ok := r.Context().Value(models.UserID("userID")).(string)
-	if !ok || userID == "" {
+
+	userID, ok := r.Context().Value(models.UserID("userid")).(string)
+	if !ok {
 		userID = "0"
 	}
+
 	record.UserID = userID
 
 	ctx := r.Context()
@@ -85,7 +87,6 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		}
 
 		newShortenURL := fmt.Sprintf("%s/%s", h.baseURL, record.ID)
-
 		w.WriteHeader(http.StatusCreated)
 		if _, err := w.Write([]byte(newShortenURL)); err != nil {
 			h.logger.Error(err.Error())
@@ -125,10 +126,13 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Empty URL", http.StatusBadRequest)
 		return
 	}
-	IDlen := 6
+	IDlen := 8
 	record.ID = utils.GenerateID(record.URL, IDlen)
 
-	userID := r.Context().Value(models.UserID("userID")).(string)
+	userID, ok := r.Context().Value(models.UserID("userid")).(string)
+	if !ok {
+		userID = "0"
+	}
 
 	record.UserID = userID
 
@@ -194,7 +198,11 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 
 	var resps []models.BatchResponse
 	var records []models.URLRecord
-	userID := r.Context().Value(models.UserID("userID")).(string)
+
+	userID, ok := r.Context().Value(models.UserID("userid")).(string)
+	if !ok {
+		userID = "0"
+	}
 
 	for _, req := range reqs {
 		var resp models.BatchResponse
@@ -210,7 +218,7 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 
 		var record models.URLRecord
 		record.URL = req.OriginalURL
-		IDlen := 6
+		IDlen := 8
 		record.ID = utils.GenerateID(record.URL, IDlen)
 		record.UserID = userID
 
@@ -236,7 +244,10 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *URLHandler) AllUserURLs(w http.ResponseWriter, r *http.Request) {
-	userID := r.Context().Value(models.UserID("userID")).(string)
+	userID, ok := r.Context().Value(models.UserID("userid")).(string)
+	if !ok {
+		userID = "0"
+	}
 
 	ctx := r.Context()
 	records, err := h.storage.GetLinksByUserID(ctx, userID, h.baseURL)

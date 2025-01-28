@@ -115,23 +115,23 @@ func TestStorage_GetAllLinksByUser000ID(t *testing.T) {
 
 	tests := map[string][]models.URLRecord{
 		"22": {
-			{UserID: "22", URL: "mailto://EBlI.LUcE/nGW/CnKgralWM", ID: "EVvMeswX"},
-			{UserID: "22", URL: "data://bNZlqPkX.zPr/AOYjayx/RXDZywCjbH", ID: "zrWsrYVK"},
-			{UserID: "22", URL: "ftps://QhPSk.SERo/ASOuRTdh/XuXCUVcR", ID: "WrBTersI"},
-			{UserID: "22", URL: "http://hwr.DqhY/qRpylA/BrBUqXwraQX", ID: "IZBF3Drj"},
-			{UserID: "22", URL: "file://rSX.gQs/AoJCRUFJbS/HbkVkdDhHkSakU", ID: "B-_ig72W"},
-			{UserID: "22", URL: "file://c.Hh/Oo/cAWXXgykO", ID: "ih4UOFRN"},
-			{UserID: "22", URL: "http://rfcv.yZ/djwBnRy/GRvWfxKARJXqiIS", ID: "CnhlRf81"},
-			{UserID: "22", URL: "sftp://zvJXD.xR/lUTNLwCMuL/ACaRzHI", ID: "oSyiotBD"},
+			{UserID: "22", URL: "mailto://EBlI.LUcE/nGW/CnKgralWM", ID: "/EVvMeswX"},
+			{UserID: "22", URL: "data://bNZlqPkX.zPr/AOYjayx/RXDZywCjbH", ID: "/zrWsrYVK"},
+			{UserID: "22", URL: "ftps://QhPSk.SERo/ASOuRTdh/XuXCUVcR", ID: "/WrBTersI"},
+			{UserID: "22", URL: "http://hwr.DqhY/qRpylA/BrBUqXwraQX", ID: "/IZBF3Drj"},
+			{UserID: "22", URL: "file://rSX.gQs/AoJCRUFJbS/HbkVkdDhHkSakU", ID: "/B-_ig72W"},
+			{UserID: "22", URL: "file://c.Hh/Oo/cAWXXgykO", ID: "/ih4UOFRN"},
+			{UserID: "22", URL: "http://rfcv.yZ/djwBnRy/GRvWfxKARJXqiIS", ID: "/CnhlRf81"},
+			{UserID: "22", URL: "sftp://zvJXD.xR/lUTNLwCMuL/ACaRzHI", ID: "/oSyiotBD"},
 		},
 		"1": {
-			{UserID: "1", URL: "ws://SAZCfOUSn.qxaU/tj/TIdK", ID: "7la40tTW"},
-			{UserID: "1", URL: "file://IyZL.go/YfaSpOpqhN/XfWd", ID: "7HVUuC38"},
-			{UserID: "1", URL: "telnet://npLzsEwn.KTR/XLv/gYhEqqdTTCUdpEjE", ID: "_QDwIZ8V"},
-			{UserID: "1", URL: "ftps://PlqcUsANz.fn/wpSOrY/NVHIDGTbCVUSL", ID: "JJd8nofa"},
-			{UserID: "1", URL: "file://WLCHVIgAk.Nc/gAqCVuw/GBZaquHPx", ID: "SVKhwBjn"},
-			{UserID: "1", URL: "bluetooth://qtuD.eT/OugB/XeohyIVkj", ID: "jzLEbSpd"},
-			{UserID: "1", URL: "file://hya.jrqF/smmqgM/GJeaDJOYx", ID: "UrqyUbm_"},
+			{UserID: "1", URL: "ws://SAZCfOUSn.qxaU/tj/TIdK", ID: "/7la40tTW"},
+			{UserID: "1", URL: "file://IyZL.go/YfaSpOpqhN/XfWd", ID: "/7HVUuC38"},
+			{UserID: "1", URL: "telnet://npLzsEwn.KTR/XLv/gYhEqqdTTCUdpEjE", ID: "/_QDwIZ8V"},
+			{UserID: "1", URL: "ftps://PlqcUsANz.fn/wpSOrY/NVHIDGTbCVUSL", ID: "/JJd8nofa"},
+			{UserID: "1", URL: "file://WLCHVIgAk.Nc/gAqCVuw/GBZaquHPx", ID: "/SVKhwBjn"},
+			{UserID: "1", URL: "bluetooth://qtuD.eT/OugB/XeohyIVkj", ID: "/jzLEbSpd"},
+			{UserID: "1", URL: "file://hya.jrqF/smmqgM/GJeaDJOYx", ID: "/UrqyUbm_"},
 		}}
 
 	for userID := range tests {

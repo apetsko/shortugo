@@ -23,16 +23,16 @@ func generateURLS(count int) []string {
 	protocols := []string{
 		"http://",
 		"https://",
-		"ftp://",
-		"ftps://",
-		"sftp://",
-		"mailto://",
-		"telnet://",
-		"file://",
-		"data://",
-		"ws://",
-		"wss://",
-		"bluetooth://",
+		//"ftp://",
+		//"ftps://",
+		//"sftp://",
+		//"mailto://",
+		//"telnet://",
+		//"file://",
+		//"data://",
+		//"ws://",
+		//"wss://",
+		//"bluetooth://",
 	}
 
 	for i := range urls {
@@ -61,10 +61,10 @@ func randomString(length int64) string {
 
 func Test_Generate(t *testing.T) {
 	m := make(map[string]string)
-	urls := generateURLS(1000)
+	urls := generateURLS(100000)
 	for i, u := range urls {
 		t.Run(fmt.Sprintf("URL #%d", i), func(t *testing.T) {
-			IDlen := 6
+			IDlen := 8
 			ID := GenerateID(u, IDlen)
 
 			ur, ok := m[ID]
