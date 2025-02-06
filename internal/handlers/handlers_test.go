@@ -82,7 +82,7 @@ func TestURLHandler_ExpandURL(t *testing.T) {
 	}{
 		{
 			name:   "positive test #1",
-			record: models.URLRecord{ID: "QrPnX5IU", URL: "https://practicum.yandex.ru/"},
+			record: models.URLRecord{ID: "QrPnX5IU", URL: "https://practicum.yandex.ru/", UserID: "55"},
 			want: want{
 				code:     307,
 				Location: "https://practicum.yandex.ru/",
@@ -121,10 +121,10 @@ func TestURLHandler_ShortenJSON(t *testing.T) {
 	}{
 		{
 			name:   "positive test #1",
-			record: models.URLRecord{URL: "https://practicum.yandex.ru/"},
+			record: models.URLRecord{URL: "https://practicum.yandex.ru/,", UserID: "55"},
 			want: want{
 				code:        201,
-				ID:          "http://localhost:8080/QrPnX5IU",
+				ID:          "http://localhost:8080/3P9NwpqM",
 				ContentType: "application/json",
 			},
 		},

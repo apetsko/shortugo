@@ -22,6 +22,7 @@ func GenerateUserID(length int) (id string, err error) {
 		err = fmt.Errorf("failed to generate random User ID: %w", err)
 		return "", err
 	}
+
 	id = hex.EncodeToString(r)
 
 	return id, nil

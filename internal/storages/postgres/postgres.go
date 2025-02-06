@@ -17,14 +17,14 @@ import (
 )
 
 //go:embed migrations/*.sql
-var embedMigrations embed.FS
+var migrations embed.FS
 
 type Storage struct {
 	pool *pgxpool.Pool
 }
 
 func applyMigrations(conn string) error {
-	goose.SetBaseFS(embedMigrations)
+	goose.SetBaseFS(migrations)
 	db, err := sql.Open("pgx", conn)
 	if err != nil {
 		return fmt.Errorf("goose: failed to open DB: %w", err)
@@ -60,12 +60,12 @@ func (p *Storage) Close() error {
 
 func (p *Storage) Put(ctx context.Context, r models.URLRecord) error {
 	const insert = `
-	INSERT INTO urls (id, url, date)
-	VALUES ($1, $2, $3)
+	INSERT INTO urls (id, url,userid, date )
+	VALUES ($1, $2, $3, $4)
 	ON CONFLICT (id)
 	DO UPDATE SET date = EXCLUDED.date;`
 
-	_, err := p.pool.Exec(ctx, insert, r.ID, r.URL, time.Now().Format(time.RFC3339))
+	_, err := p.pool.Exec(ctx, insert, r.ID, r.URL, r.UserID, time.Now().Format(time.RFC3339))
 	if err != nil {
 		return fmt.Errorf("failed to insert URL: %w", err)
 	}
@@ -75,14 +75,14 @@ func (p *Storage) Put(ctx context.Context, r models.URLRecord) error {
 
 func (p *Storage) PutBatch(ctx context.Context, rr []models.URLRecord) error {
 	const insertBatch = `
-	INSERT INTO urls (id, url, date)
-	VALUES ($1, $2, $3)
+	INSERT INTO urls (id, url, userid, date)
+	VALUES ($1, $2, $3, $4)
 	ON CONFLICT (id)
 	DO UPDATE SET date = EXCLUDED.date;`
 
 	batch := new(pgx.Batch)
 	for _, r := range rr {
-		batch.Queue(insertBatch, r.ID, r.URL, time.Now().Format(time.RFC3339))
+		batch.Queue(insertBatch, r.ID, r.URL, r.UserID, time.Now().Format(time.RFC3339))
 	}
 	br := p.pool.SendBatch(ctx, batch)
 	defer br.Close()
@@ -99,9 +99,10 @@ func (p *Storage) Get(ctx context.Context, id string) (url string, err error) {
 		return "", err
 	}
 
-	const query = "SELECT url FROM urls WHERE id=$1"
+	deleted := false
+	const query = "SELECT url, deleted FROM urls WHERE id = $1"
 
-	err = p.pool.QueryRow(ctx, query, id).Scan(&url)
+	err = p.pool.QueryRow(ctx, query, id).Scan(&url, &deleted)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", fmt.Errorf("URL not found: %s. %w", id, shared.ErrNotFound)
@@ -113,12 +114,68 @@ func (p *Storage) Get(ctx context.Context, id string) (url string, err error) {
 		return "", err
 	}
 
+	if deleted {
+		return "", shared.ErrGone
+	}
+
 	return url, nil
 }
 
-func (p *Storage) GetByUserID(ctx context.Context, userID string) (rr []models.URLRecord, err error) {
+func (p *Storage) GetLinksByUserID(ctx context.Context, userID, baseURL string) (rr []models.URLRecord, err error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	const query = "SELECT id, url, userid  FROM urls WHERE userid = $1 AND deleted = FALSE"
+
+	rows, err := p.pool.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var record models.URLRecord
+		if err := rows.Scan(&record.ID, &record.URL, &record.UserID); err != nil {
+			return nil, fmt.Errorf("failed to scan row: %w", err)
+		}
+		record.ID = fmt.Sprintf("%s/%s", baseURL, record.ID)
+		rr = append(rr, record)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("error iterating over rows: %w", err)
+	}
+
+	if len(rr) == 0 {
+		return nil, fmt.Errorf("urls not found for userid: %s. %w", userID, shared.ErrNotFound)
+	}
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	return rr, nil
+}
+
+func (p *Storage) DeleteUserURLs(ctx context.Context, ids []string, userID string) error {
+	const setDeleteBatch = `
+		UPDATE urls
+		SET deleted = true
+		WHERE id = ANY($1::text[]) AND userid = $2 AND deleted = FALSE;`
+
+	batch := new(pgx.Batch)
+
+	batch.Queue(setDeleteBatch, ids, userID)
+
+	br := p.pool.SendBatch(ctx, batch)
+	defer br.Close()
+	_, err := br.Exec()
+	if err != nil {
+		return fmt.Errorf("failed to batch delete user urls: %w", err)
+	}
+
+	return nil
 }
 
 func (p *Storage) Ping() error {

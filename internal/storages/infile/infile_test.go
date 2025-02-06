@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/apetsko/shortugo/internal/models"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -32,6 +31,7 @@ func Test_Put(t *testing.T) {
 		{URL: "bluetooth://qtuD.eT/OugB/XeohyIVkj", ID: "jzLEbSpd"},
 		{URL: "file://hya.jrqF/smmqgM/GJeaDJOYx", ID: "UrqyUbm_"},
 	}
+
 	for i, test := range tests {
 		t.Run(fmt.Sprintf("test_put #%d", i), func(t *testing.T) {
 			err := ifile.Put(context.Background(), test)

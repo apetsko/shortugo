@@ -3,13 +3,19 @@ package models
 import "github.com/golang-jwt/jwt/v4"
 
 type URLRecord struct {
-	ID     string `json:"id"`
-	URL    string `json:"url"`
-	UserID string `json:"userID"`
+	ID      string `json:"id"`
+	URL     string `json:"url"`
+	UserID  string `json:"userid"`
+	Deleted bool   `json:"deleted"`
 }
 
 type Result struct {
 	Result string `json:"result"`
+}
+
+type BatchDeleteRequest struct {
+	Ids    []string
+	UserID string
 }
 
 type BatchRequest struct {
@@ -26,3 +32,10 @@ type AuthClaims struct {
 	UserID string `json:"userid"`
 	jwt.RegisteredClaims
 }
+
+type UserURL struct {
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}
+
+type UserID string
