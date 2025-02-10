@@ -17,7 +17,7 @@ tasks:
     desc: run project
     dir: cmd/shortener
     cmds:
-      - go run main.go -d="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
+      - go run main.go -f="db.json" #-d="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
     silent: true
 
   test:
@@ -38,3 +38,5 @@ tasks:
       - ./shortenertest -test.v -test.run=^TestIteration11$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
       - ./shortenertest -test.v -test.run=^TestIteration12$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
       - ./shortenertest -test.v -test.run=^TestIteration13$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
+      - ./shortenertest -test.v -test.run=^TestIteration14$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
+      - ./shortenertest -test.v -test.run=^TestIteration15$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"

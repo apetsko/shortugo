@@ -9,11 +9,11 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/apetsko/shortugo/internal/auth"
 	"github.com/apetsko/shortugo/internal/logging"
 	mw "github.com/apetsko/shortugo/internal/middleware"
 	"github.com/apetsko/shortugo/internal/models"
 	"github.com/apetsko/shortugo/internal/storages/shared"
-
 	"github.com/apetsko/shortugo/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -23,25 +23,41 @@ type Storage interface {
 	Put(ctx context.Context, r models.URLRecord) error
 	PutBatch(ctx context.Context, rr []models.URLRecord) error
 	Get(ctx context.Context, id string) (url string, err error)
+	ListLinksByUserID(ctx context.Context, baseURL, userID string) (rr []models.URLRecord, err error)
+	DeleteUserURLs(ctx context.Context, IDs []string, userID string) (err error)
 	Ping() error
 	Close() error
 }
 
 type URLHandler struct {
-	baseURL string
-	storage Storage
-	logger  *logging.ZapLogger
+	baseURL  string
+	storage  Storage
+	secret   string
+	ToDelete chan models.BatchDeleteRequest
+	logger   *logging.ZapLogger
 }
 
-func NewURLHandler(b string, s Storage, l *logging.ZapLogger) *URLHandler {
+func NewURLHandler(baseURL string, s Storage, l *logging.ZapLogger, secret string) *URLHandler {
 	return &URLHandler{
-		baseURL: b,
-		storage: s,
-		logger:  l,
+		baseURL:  baseURL,
+		storage:  s,
+		logger:   l,
+		secret:   secret,
+		ToDelete: make(chan models.BatchDeleteRequest),
 	}
 }
 
 func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
+	userID, err := auth.CookieUserID(r, h.secret)
+	if err != nil {
+		userID, err = auth.SetUserIDCookie(w, h.secret)
+		if err != nil {
+			h.logger.Error(err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
 	defer r.Body.Close()
 
 	body, err := io.ReadAll(r.Body)
@@ -56,10 +72,13 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	IDlen := 8
 	record := models.URLRecord{
 		URL: url,
-		ID:  utils.Generate(url),
+		ID:  utils.GenerateID(url, IDlen),
 	}
+
+	record.UserID = userID
 
 	ctx := r.Context()
 
@@ -77,7 +96,6 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		}
 
 		newShortenURL := fmt.Sprintf("%s/%s", h.baseURL, record.ID)
-
 		w.WriteHeader(http.StatusCreated)
 		if _, err := w.Write([]byte(newShortenURL)); err != nil {
 			h.logger.Error(err.Error())
@@ -96,6 +114,16 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
+	userID, err := auth.CookieUserID(r, h.secret)
+	if err != nil {
+		userID, err = auth.SetUserIDCookie(w, h.secret)
+		if err != nil {
+			h.logger.Error(err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
 	defer r.Body.Close()
 
 	body, err := io.ReadAll(r.Body)
@@ -117,8 +145,10 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Empty URL", http.StatusBadRequest)
 		return
 	}
+	IDlen := 8
+	record.ID = utils.GenerateID(record.URL, IDlen)
 
-	record.ID = utils.Generate(record.URL)
+	record.UserID = userID
 
 	var resp models.Result
 
@@ -136,8 +166,8 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		resp.Result = fmt.Sprintf("%s/%s", h.baseURL, record.ID)
 
+		resp.Result = fmt.Sprintf("%s/%s", h.baseURL, record.ID)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusCreated)
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
@@ -146,9 +176,9 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if url != "" {
+		resp.Result = fmt.Sprintf("%s/%s", h.baseURL, record.ID)
 		w.Header().Add("Content-Type", "application/json")
 		w.WriteHeader(http.StatusConflict)
-		resp.Result = fmt.Sprintf("%s/%s", h.baseURL, record.ID)
 		if err := json.NewEncoder(w).Encode(resp); err != nil {
 			h.logger.Error(err.Error())
 		}
@@ -157,6 +187,16 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
+	userID, err := auth.CookieUserID(r, h.secret)
+	if err != nil {
+		userID, err = auth.SetUserIDCookie(w, h.secret)
+		if err != nil {
+			h.logger.Error(err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+	}
+
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
@@ -166,21 +206,22 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, "Failed to read request body", http.StatusBadRequest)
+		h.logger.Info("Error unmarshaling request body", "error", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	var reqs []models.BatchRequest
 
-	err = json.Unmarshal(body, &reqs)
-	if err != nil {
+	if err = json.Unmarshal(body, &reqs); err != nil {
 		h.logger.Info("Error unmarshaling request body", "error", err.Error())
-		http.Error(w, "", http.StatusBadRequest)
+		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	var resps []models.BatchResponse
 	var records []models.URLRecord
+
 	for _, req := range reqs {
 		var resp models.BatchResponse
 
@@ -195,25 +236,106 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 
 		var record models.URLRecord
 		record.URL = req.OriginalURL
-		record.ID = utils.Generate(record.URL)
+		IDlen := 8
+		record.ID = utils.GenerateID(record.URL, IDlen)
+		record.UserID = userID
 
 		records = append(records, record)
 
 		shortURL := fmt.Sprintf("%s/%s", h.baseURL, record.ID)
 		resp = models.BatchResponse{ID: req.ID, ShortURL: shortURL}
 		resps = append(resps, resp)
-
-		ctx := r.Context()
-		if err = h.storage.PutBatch(ctx, records); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
 	}
 
+	ctx := r.Context()
+	if err = h.storage.PutBatch(ctx, records); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
 	if err := json.NewEncoder(w).Encode(resps); err != nil {
+		h.logger.Error(err.Error())
+	}
+}
+
+func (h *URLHandler) AllUserURLs(w http.ResponseWriter, r *http.Request) {
+	userID, err := auth.UserIDFromCookie(r, h.secret)
+	if err != nil {
+		h.logger.Error(err.Error())
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	ctx := r.Context()
+	records, err := h.storage.ListLinksByUserID(ctx, userID, h.baseURL)
+	if err != nil {
+		if errors.Is(err, shared.ErrNotFound) {
+			h.logger.Error(err.Error())
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		if errors.Is(err, shared.ErrNotFound) {
+			h.logger.Error(err.Error())
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	var userURLs = make([]models.UserURL, 0, len(records))
+	for _, record := range records {
+		userURLs = append(userURLs, models.UserURL{
+			ShortURL:    record.ID,
+			OriginalURL: record.URL,
+		})
+	}
+
+	resp, err := json.Marshal(userURLs)
+	if err != nil {
+		h.logger.Error(err.Error())
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, err = w.Write(resp)
+	if err != nil {
+		h.logger.Error(err.Error())
+	}
+}
+
+func (h *URLHandler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
+	userID, err := auth.UserIDFromCookie(r, h.secret)
+	if err != nil {
+		h.logger.Error(err.Error())
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		h.logger.Info("Error unmarshaling request body", "error", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	var ids []string
+
+	err = json.Unmarshal(body, &ids)
+	if err != nil {
+		h.logger.Info("Error unmarshaling request body", "error", err.Error())
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	go func() {
+		h.ToDelete <- models.BatchDeleteRequest{Ids: ids, UserID: userID}
+	}()
+
+	w.WriteHeader(http.StatusAccepted)
+	if _, err := fmt.Fprintf(w, "%v", ids); err != nil {
 		h.logger.Error(err.Error())
 	}
 }
@@ -224,11 +346,24 @@ func (h *URLHandler) ExpandURL(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	URL, err := h.storage.Get(ctx, ID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		if errors.Is(err, shared.ErrGone) {
+			h.logger.Error(err.Error())
+			w.WriteHeader(http.StatusGone)
+			return
+		}
+
+		if errors.Is(err, shared.ErrNotFound) {
+			h.logger.Error(err.Error())
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+
+		h.logger.Error(err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Location", URL)
-	w.Header().Add("Content-Type", "application/json")
+	w.Header().Add("Content-Type", "text/html")
 
 	w.WriteHeader(http.StatusTemporaryRedirect)
 	_, err = w.Write([]byte(URL))
@@ -252,12 +387,14 @@ func SetupRouter(handler *URLHandler) *chi.Mux {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
-	r.Use(mw.WithLogging(handler.logger))
+	r.Use(mw.LoggingMiddleware(handler.logger))
 	r.Use(mw.GzipMiddleware(handler.logger))
 
 	r.Post("/", handler.ShortenURL)
 	r.Post("/api/shorten", handler.ShortenJSON)
 	r.Post("/api/shorten/batch", handler.ShortenBatchJSON)
+	r.Get("/api/user/urls", handler.AllUserURLs)
+	r.Delete("/api/user/urls", handler.DeleteUserURLs)
 	r.Get("/{id}", handler.ExpandURL)
 	r.Get("/ping", handler.PingDB)
 

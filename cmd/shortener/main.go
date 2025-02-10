@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 
@@ -28,6 +29,7 @@ func main() {
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
+
 	defer func(storage handlers.Storage) {
 		err := storage.Close()
 		if err != nil {
@@ -35,7 +37,10 @@ func main() {
 		}
 	}(storage)
 
-	handler := handlers.NewURLHandler(cfg.BaseURL, storage, logger)
+	handler := handlers.NewURLHandler(cfg.BaseURL, storage, logger, cfg.Secret)
+
+	go storages.StartBatchDeleteProcessor(context.Background(), storage, handler.ToDelete, logger)
+
 	router := handlers.SetupRouter(handler)
 	s := server.New(cfg.Host, router)
 
