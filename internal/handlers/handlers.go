@@ -246,7 +246,7 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 		resp = models.BatchResponse{ID: req.ID, ShortURL: shortURL}
 		resps = append(resps, resp)
 	}
-	fmt.Println(resps)
+
 	ctx := r.Context()
 	if err = h.storage.PutBatch(ctx, records); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

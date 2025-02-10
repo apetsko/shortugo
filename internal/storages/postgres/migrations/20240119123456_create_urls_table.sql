@@ -6,4 +6,4 @@ CREATE TABLE IF NOT EXISTS urls (
 );
 
 -- +goose Down
-DROP TABLE urls;
+DROP TABLE IF EXISTS urls;
