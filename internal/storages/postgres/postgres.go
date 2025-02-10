@@ -60,7 +60,7 @@ func (p *Storage) Close() error {
 
 func (p *Storage) Put(ctx context.Context, r models.URLRecord) error {
 	const insert = `
-	INSERT INTO urls (id, url,userid, date )
+	INSERT INTO urls (id, url,user_id, date )
 	VALUES ($1, $2, $3, $4)
 	ON CONFLICT (id)
 	DO UPDATE SET date = EXCLUDED.date;`
@@ -75,7 +75,7 @@ func (p *Storage) Put(ctx context.Context, r models.URLRecord) error {
 
 func (p *Storage) PutBatch(ctx context.Context, rr []models.URLRecord) error {
 	const insertBatch = `
-	INSERT INTO urls (id, url, userid, date)
+	INSERT INTO urls (id, url, user_id, date)
 	VALUES ($1, $2, $3, $4)
 	ON CONFLICT (id)
 	DO UPDATE SET date = EXCLUDED.date;`
@@ -121,12 +121,12 @@ func (p *Storage) Get(ctx context.Context, id string) (url string, err error) {
 	return url, nil
 }
 
-func (p *Storage) GetLinksByUserID(ctx context.Context, userID, baseURL string) (rr []models.URLRecord, err error) {
+func (p *Storage) ListLinksByUserID(ctx context.Context, userID, baseURL string) (rr []models.URLRecord, err error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 
-	const query = "SELECT id, url, userid  FROM urls WHERE userid = $1 AND deleted = FALSE"
+	const query = "SELECT id, url, user_id  FROM urls WHERE user_id = $1 AND deleted = FALSE"
 
 	rows, err := p.pool.Query(ctx, query, userID)
 	if err != nil {
@@ -148,7 +148,7 @@ func (p *Storage) GetLinksByUserID(ctx context.Context, userID, baseURL string) 
 	}
 
 	if len(rr) == 0 {
-		return nil, fmt.Errorf("urls not found for userid: %s. %w", userID, shared.ErrNotFound)
+		return nil, fmt.Errorf("urls not found for userID: %s. %w", userID, shared.ErrNotFound)
 	}
 
 	if err := ctx.Err(); err != nil {
@@ -162,7 +162,7 @@ func (p *Storage) DeleteUserURLs(ctx context.Context, ids []string, userID strin
 	const setDeleteBatch = `
 		UPDATE urls
 		SET deleted = true
-		WHERE id = ANY($1::text[]) AND userid = $2 AND deleted = FALSE;`
+		WHERE id = ANY($1::text[]) AND user_id = $2 AND deleted = FALSE;`
 
 	batch := new(pgx.Batch)
 

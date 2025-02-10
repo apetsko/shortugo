@@ -23,7 +23,7 @@ type Storage interface {
 	Put(ctx context.Context, r models.URLRecord) error
 	PutBatch(ctx context.Context, rr []models.URLRecord) error
 	Get(ctx context.Context, id string) (url string, err error)
-	GetLinksByUserID(ctx context.Context, baseURL, userID string) (rr []models.URLRecord, err error)
+	ListLinksByUserID(ctx context.Context, baseURL, userID string) (rr []models.URLRecord, err error)
 	DeleteUserURLs(ctx context.Context, IDs []string, userID string) (err error)
 	Ping() error
 	Close() error
@@ -246,7 +246,7 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 		resp = models.BatchResponse{ID: req.ID, ShortURL: shortURL}
 		resps = append(resps, resp)
 	}
-	fmt.Println(resps)
+
 	ctx := r.Context()
 	if err = h.storage.PutBatch(ctx, records); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
@@ -269,7 +269,7 @@ func (h *URLHandler) AllUserURLs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	records, err := h.storage.GetLinksByUserID(ctx, userID, h.baseURL)
+	records, err := h.storage.ListLinksByUserID(ctx, userID, h.baseURL)
 	if err != nil {
 		if errors.Is(err, shared.ErrNotFound) {
 			h.logger.Error(err.Error())

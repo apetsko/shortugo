@@ -137,9 +137,9 @@ func TestStorage_GetAllLinksByUser000ID(t *testing.T) {
 	for userID := range tests {
 		t.Run(userID, func(t *testing.T) {
 			ctx := context.Background()
-			gotRr, err := im.GetLinksByUserID(ctx, "", userID)
+			gotRr, err := im.ListLinksByUserID(ctx, "", userID)
 			require.NoError(t, err)
-			assert.Equalf(t, tests[userID], gotRr, "GetLinksByUserID(%v, %v)", ctx, userID)
+			assert.Equalf(t, tests[userID], gotRr, "ListLinksByUserID(%v, %v)", ctx, userID)
 		})
 	}
 }

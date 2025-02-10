@@ -150,7 +150,7 @@ func (f *Storage) Get(ctx context.Context, shortURL string) (string, error) {
 	return "", fmt.Errorf("URL not found: %s. %w", shortURL, shared.ErrNotFound)
 }
 
-func (f *Storage) GetLinksByUserID(ctx context.Context, baseURL, userID string) (rr []models.URLRecord, err error) {
+func (f *Storage) ListLinksByUserID(ctx context.Context, baseURL, userID string) (rr []models.URLRecord, err error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}

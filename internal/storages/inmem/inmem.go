@@ -59,7 +59,7 @@ func (im *Storage) Get(ctx context.Context, shortURL string) (url string, err er
 	return "", fmt.Errorf("URL not found: %s. %w", shortURL, shared.ErrNotFound)
 }
 
-func (im *Storage) GetLinksByUserID(ctx context.Context, baseURL, userID string) (rr []models.URLRecord, err error) {
+func (im *Storage) ListLinksByUserID(ctx context.Context, baseURL, userID string) (rr []models.URLRecord, err error) {
 	select {
 	case <-ctx.Done():
 		return nil, ctx.Err()

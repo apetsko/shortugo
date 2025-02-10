@@ -1,7 +1,5 @@
 package models
 
-import "github.com/golang-jwt/jwt/v4"
-
 type URLRecord struct {
 	ID      string `json:"id"`
 	URL     string `json:"url"`
@@ -28,14 +26,7 @@ type BatchResponse struct {
 	ShortURL string `json:"short_url"`
 }
 
-type AuthClaims struct {
-	UserID string `json:"userid"`
-	jwt.RegisteredClaims
-}
-
 type UserURL struct {
 	ShortURL    string `json:"short_url"`
 	OriginalURL string `json:"original_url"`
 }
-
-type UserID string
