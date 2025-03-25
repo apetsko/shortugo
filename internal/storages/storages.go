@@ -32,7 +32,7 @@ func Init(databaseDSN, fileStoragePath string, logger *logging.ZapLogger) (handl
 		if err != nil {
 			return nil, err
 		}
-		logger.Info("Using file storages")
+		logger.Infof("Using file storage: %s", fileStoragePath)
 		return s, nil
 	default:
 		s := inmem.New()

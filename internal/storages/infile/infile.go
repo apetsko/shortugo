@@ -10,6 +10,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/apetsko/shortugo/internal/models"
 	"github.com/apetsko/shortugo/internal/storages/shared"
@@ -43,7 +44,7 @@ func (b CustomBool) MarshalJSON() ([]byte, error) {
 type Storage struct {
 	file    *os.File
 	encoder *json.Encoder
-	scanner *bufio.Scanner
+	mu      sync.Mutex
 }
 
 func New(filename string) (*Storage, error) {
@@ -55,7 +56,6 @@ func New(filename string) (*Storage, error) {
 	return &Storage{
 		file:    f,
 		encoder: json.NewEncoder(f),
-		scanner: bufio.NewScanner(f),
 	}, nil
 }
 
@@ -67,6 +67,9 @@ func (f *Storage) Put(ctx context.Context, r models.URLRecord) (err error) {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
 
 	if err := f.encoder.Encode(r); err != nil {
 		return err
@@ -80,10 +83,6 @@ func (f *Storage) Put(ctx context.Context, r models.URLRecord) (err error) {
 		return fmt.Errorf("error sync file: %w", err)
 	}
 
-	if err := ctx.Err(); err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -94,14 +93,6 @@ func (f *Storage) PutBatch(ctx context.Context, rr []models.URLRecord) (err erro
 		}
 
 		if err := f.encoder.Encode(r); err != nil {
-			return err
-		}
-
-		if err := ctx.Err(); err != nil {
-			return err
-		}
-
-		if err := ctx.Err(); err != nil {
 			return err
 		}
 
@@ -121,18 +112,13 @@ func (f *Storage) Get(ctx context.Context, shortURL string) (string, error) {
 		return "", fmt.Errorf("error setting file seek: %w", err)
 	}
 
-	f.scanner = bufio.NewScanner(f.file)
-	for f.scanner.Scan() {
-		data := f.scanner.Bytes()
-
-		r := new(models.URLRecord)
-		err := json.Unmarshal(data, r)
+	r := new(models.URLRecord)
+	scanner := bufio.NewScanner(f.file)
+	for scanner.Scan() {
+		data := scanner.Bytes()
+		err := json.Unmarshal(data, &r)
 		if err != nil {
-			return "", err
-		}
-
-		if err := ctx.Err(); err != nil {
-			return "", err
+			return "", fmt.Errorf("failed unmarshal: %w", err)
 		}
 
 		if r.ID == shortURL {
@@ -143,14 +129,14 @@ func (f *Storage) Get(ctx context.Context, shortURL string) (string, error) {
 		}
 	}
 
-	if err := f.scanner.Err(); err != nil {
+	if err := scanner.Err(); err != nil {
 		return "", fmt.Errorf("error reading file: %w", err)
 	}
 
 	return "", fmt.Errorf("URL not found: %s. %w", shortURL, shared.ErrNotFound)
 }
 
-func (f *Storage) ListLinksByUserID(ctx context.Context, baseURL, userID string) (rr []models.URLRecord, err error) {
+func (f *Storage) ListLinksByUserID(ctx context.Context, userID, baseURL string) ([]models.URLRecord, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -159,30 +145,27 @@ func (f *Storage) ListLinksByUserID(ctx context.Context, baseURL, userID string)
 		return nil, fmt.Errorf("error setting file seek: %w", err)
 	}
 
-	f.scanner = bufio.NewScanner(f.file)
-	for f.scanner.Scan() {
-		data := f.scanner.Bytes()
-
-		r := new(models.URLRecord)
+	rr := make([]models.URLRecord, 0)
+	r := new(models.URLRecord)
+	scanner := bufio.NewScanner(f.file)
+	for scanner.Scan() {
+		data := scanner.Bytes()
 		if err := json.Unmarshal(data, r); err != nil {
 			return nil, err
 		}
 
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-
-		if r.UserID == userID {
+		if r.UserID == userID && !r.Deleted {
 			r.ID = fmt.Sprintf("%s/%s", baseURL, r.ID)
 			rr = append(rr, *r)
 		}
 	}
+	// TODO ВЫЯСНИТЬ ПОЧЕМУ НЕ ВЫВОДИТ ВСЕ ССЫЛКИ ПОЛЬЗОВАТЕЛЯ
 
-	if err := f.scanner.Err(); err != nil {
+	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("error reading file: %w", err)
 	}
 
-	if len(rr) != 0 {
+	if len(rr) == 0 {
 		return rr, fmt.Errorf("URLs not found for UserID: %s. %w", userID, shared.ErrNotFound)
 	}
 	return rr, nil
@@ -198,15 +181,12 @@ func (f *Storage) DeleteUserURLs(ctx context.Context, ids []string, userID strin
 	}
 
 	var offset int64
-	f.scanner = bufio.NewScanner(f.file)
-	for f.scanner.Scan() {
-		data := f.scanner.Bytes()
-		r := new(models.URLRecord)
-		if err := json.Unmarshal(data, r); err != nil {
-			return err
-		}
 
-		if err := ctx.Err(); err != nil {
+	r := new(models.URLRecord)
+	scanner := bufio.NewScanner(f.file)
+	for scanner.Scan() {
+		data := scanner.Bytes()
+		if err := json.Unmarshal(data, r); err != nil {
 			return err
 		}
 
@@ -222,7 +202,7 @@ func (f *Storage) DeleteUserURLs(ctx context.Context, ids []string, userID strin
 		}
 	}
 
-	if err := f.scanner.Err(); err != nil {
+	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("error reading file: %w", err)
 	}
 	return nil

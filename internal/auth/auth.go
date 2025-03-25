@@ -9,6 +9,8 @@ import (
 	"github.com/gorilla/securecookie"
 )
 
+var ErrNoUserIDFound = errors.New("no user ID found in cookie")
+
 func securedCookie(secret string) *securecookie.SecureCookie {
 	secretLen := 32
 	id := utils.GenerateID(secret, secretLen)
@@ -16,7 +18,7 @@ func securedCookie(secret string) *securecookie.SecureCookie {
 	return securecookie.New(sharedSecret, sharedSecret)
 }
 
-func SetUserIDCookie(w http.ResponseWriter, secret string) (userID string, err error) {
+func SetCookie(w http.ResponseWriter, secret string) (userID string, err error) {
 	sc := securedCookie(secret)
 
 	userIDLen := 8
@@ -40,44 +42,30 @@ func SetUserIDCookie(w http.ResponseWriter, secret string) (userID string, err e
 	return userID, nil
 }
 
-func GetUserIDFromCookie(cookie *http.Cookie, secret string) (string, error) {
+func UserIDFromCookie(r *http.Request, secret string) (string, error) {
+	cookie, err := r.Cookie("shortugo")
+	if err != nil {
+		return "", err
+	}
+
+	userID, err := readUserID(cookie, secret)
+	if err != nil {
+		err = fmt.Errorf("failed get userid from cookie: %w", err)
+		return "", err
+	}
+	return userID, nil
+}
+
+func readUserID(cookie *http.Cookie, secret string) (string, error) {
 	var userID string
 	sc := securedCookie(secret)
 	if err := sc.Decode("shortugo", cookie.Value, &userID); err != nil {
-		err = fmt.Errorf("error decoding user cookie: %w", err)
+		err = fmt.Errorf("%w: %w", ErrNoUserIDFound, err)
 		return "", err
 	}
 
 	if userID == "" {
-		return "", errors.New("userid not found in cookie")
-	}
-	return userID, nil
-}
-
-func CookieUserID(r *http.Request, secret string) (string, error) {
-	cookie, err := r.Cookie("shortugo")
-	if err != nil {
-		return "", err
-	}
-
-	userID, err := GetUserIDFromCookie(cookie, secret)
-	if err != nil {
-		return "", err
-	}
-	return userID, nil
-}
-
-func UserIDFromCookie(r *http.Request, secret string) (string, error) {
-	cookie, err := r.Cookie("shortugo")
-	if err != nil {
-		err = fmt.Errorf("error getting userid cookie: %w", err)
-		return "", err
-	}
-
-	userID, err := GetUserIDFromCookie(cookie, secret)
-	if err != nil {
-		err = fmt.Errorf("error getting userid from cookie: %w", err)
-		return "", err
+		return "", ErrNoUserIDFound
 	}
 	return userID, nil
 }

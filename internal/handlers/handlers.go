@@ -48,9 +48,9 @@ func NewURLHandler(baseURL string, s Storage, l *logging.ZapLogger, secret strin
 }
 
 func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
-	userID, err := auth.CookieUserID(r, h.secret)
+	userID, err := auth.UserIDFromCookie(r, h.secret)
 	if err != nil {
-		userID, err = auth.SetUserIDCookie(w, h.secret)
+		userID, err = auth.SetCookie(w, h.secret)
 		if err != nil {
 			h.logger.Error(err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
@@ -74,11 +74,10 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	IDlen := 8
 	record := models.URLRecord{
-		URL: url,
-		ID:  utils.GenerateID(url, IDlen),
+		URL:    url,
+		ID:     utils.GenerateID(url, IDlen),
+		UserID: userID,
 	}
-
-	record.UserID = userID
 
 	ctx := r.Context()
 
@@ -114,9 +113,9 @@ func (h *URLHandler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
-	userID, err := auth.CookieUserID(r, h.secret)
+	userID, err := auth.UserIDFromCookie(r, h.secret)
 	if err != nil {
-		userID, err = auth.SetUserIDCookie(w, h.secret)
+		userID, err = auth.SetCookie(w, h.secret)
 		if err != nil {
 			h.logger.Error(err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
@@ -187,9 +186,9 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
-	userID, err := auth.CookieUserID(r, h.secret)
+	userID, err := auth.UserIDFromCookie(r, h.secret)
 	if err != nil {
-		userID, err = auth.SetUserIDCookie(w, h.secret)
+		userID, err = auth.SetCookie(w, h.secret)
 		if err != nil {
 			h.logger.Error(err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
@@ -263,9 +262,12 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 func (h *URLHandler) AllUserURLs(w http.ResponseWriter, r *http.Request) {
 	userID, err := auth.UserIDFromCookie(r, h.secret)
 	if err != nil {
-		h.logger.Error(err.Error())
-		w.WriteHeader(http.StatusUnauthorized)
-		return
+		userID, err = auth.SetCookie(w, h.secret)
+		if err != nil {
+			h.logger.Error(err.Error())
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
 	}
 
 	ctx := r.Context()

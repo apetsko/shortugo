@@ -19,7 +19,7 @@ tasks:
   run:
     desc: run project
     cmds:
-      - wgo run cmd/shortener/main.go -f="db.json" #-d="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
+      - wgo run cmd/shortener/main.go -f="db.json" -d="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
     silent: true
 
   test:
