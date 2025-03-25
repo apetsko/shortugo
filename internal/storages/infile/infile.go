@@ -159,7 +159,6 @@ func (f *Storage) ListLinksByUserID(ctx context.Context, userID, baseURL string)
 			rr = append(rr, *r)
 		}
 	}
-	// TODO ВЫЯСНИТЬ ПОЧЕМУ НЕ ВЫВОДИТ ВСЕ ССЫЛКИ ПОЛЬЗОВАТЕЛЯ
 
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("error reading file: %w", err)
