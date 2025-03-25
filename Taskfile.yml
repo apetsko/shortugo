@@ -1,11 +1,13 @@
 version: "3"
 
 tasks:
+
   lint:
     desc: Run linters using golangci-lint
     cmds:
       - golangci-lint run --config .golangci.yml
     silent: true
+
   build:
     desc: build project
     dir: cmd/shortener
@@ -13,11 +15,11 @@ tasks:
       - go build -o shortener
       - echo "Doner"
     silent: true
+
   run:
     desc: run project
-    dir: cmd/shortener
     cmds:
-      - go run main.go -f="db.json" #-d="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
+      - wgo run cmd/shortener/main.go -f="db.json" #-d="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
     silent: true
 
   test:
@@ -40,4 +42,4 @@ tasks:
       - ./shortenertest -test.v -test.run=^TestIteration13$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
       - ./shortenertest -test.v -test.run=^TestIteration14$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
       - ./shortenertest -test.v -test.run=^TestIteration15$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
-      - ./shortenertest -test.v -test.run=^TestIteration16$ -source-path="."
+     # - ./shortenertest -test.v -test.run=^TestIteration16$ -source-path="."

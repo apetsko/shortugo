@@ -14,6 +14,7 @@
 # Binaries
 cmd/shortener/main
 cmd/shortener/shortener
+/shortener
 /shortenertest
 
 # Dependency directories (remove the comment below to include it)
@@ -26,4 +27,6 @@ makefile
 golangci-lint
 *.json
 
+
+/.golangci.bck.yml
 
