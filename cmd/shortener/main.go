@@ -14,7 +14,7 @@ import (
 )
 
 func main() {
-	logger, err := logging.NewZapLogger()
+	logger, err := logging.New()
 	if err != nil {
 		log.Fatal("Failed to initialize logger:", err)
 	}
@@ -41,7 +41,7 @@ func main() {
 
 	go storages.StartBatchDeleteProcessor(context.Background(), storage, handler.ToDelete, logger)
 
-	router := handlers.SetupRouter(handler)
+	router := server.Router(handler)
 	s := server.New(cfg.Host, router)
 
 	logger.Info("running server on " + cfg.Host)

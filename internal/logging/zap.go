@@ -8,7 +8,7 @@ type ZapLogger struct {
 	*zap.SugaredLogger
 }
 
-func NewZapLogger() (*ZapLogger, error) {
+func New() (*ZapLogger, error) {
 	config := zap.NewDevelopmentConfig()
 	config.EncoderConfig.TimeKey = "timestamp"
 	config.EncoderConfig.StacktraceKey = ""

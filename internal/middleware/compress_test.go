@@ -47,7 +47,7 @@ func TestGzipMiddleware_JSON(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	zlogger, err := logging.NewZapLogger()
+	zlogger, err := logging.New()
 	require.NoError(t, err)
 
 	gzipWithLogger := GzipMiddleware(zlogger)
@@ -81,7 +81,7 @@ func TestGzipMiddleware_HTML(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	zlogger, err := logging.NewZapLogger()
+	zlogger, err := logging.New()
 	require.NoError(t, err)
 
 	gzipWithLogger := GzipMiddleware(zlogger)
@@ -116,7 +116,7 @@ func TestGzipMiddleware_Text(t *testing.T) {
 	req.Header.Set("Accept-Encoding", "gzip")
 	rr := httptest.NewRecorder()
 
-	zlogger, err := logging.NewZapLogger()
+	zlogger, err := logging.New()
 	require.NoError(t, err)
 
 	gzipWithLogger := GzipMiddleware(zlogger)
