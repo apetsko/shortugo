@@ -8,13 +8,42 @@ import (
 	"testing"
 
 	"github.com/apetsko/shortugo/internal/logging"
+	"github.com/apetsko/shortugo/internal/mocks"
 	"github.com/apetsko/shortugo/internal/models"
 	"github.com/apetsko/shortugo/internal/storages/inmem"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap/zapcore"
 )
 
+func BenchmarkExpandURL(b *testing.B) {
+	logger, _ := logging.New(zapcore.DebugLevel)
+	mockStorage := new(mocks.Storage)
+	h := &URLHandler{
+		storage: mockStorage,
+		Logger:  logger,
+	}
+
+	testID := "abc123"
+	mockURL := "https://example.com"
+
+	mockStorage.On("Get", mock.Anything, testID).Return(mockURL, nil)
+
+	for i := 0; i < b.N; i++ {
+		req := httptest.NewRequest("GET", "/"+testID, nil)
+		w := httptest.NewRecorder()
+
+		h.ExpandURL(w, req)
+
+		resp := w.Result()
+
+		assert.Equal(b, http.StatusTemporaryRedirect, resp.StatusCode, "unexpected status code")
+		assert.Equal(b, mockURL, resp.Header.Get("Location"), "unexpected Location header")
+	}
+}
+
 func TestURLHandler_ExpandURL(t *testing.T) {
-	logger, err := logging.New()
+	logger, err := logging.New(zapcore.DebugLevel)
 	if err != nil {
 		log.Fatal("Failed to initialize logger:", err)
 	}

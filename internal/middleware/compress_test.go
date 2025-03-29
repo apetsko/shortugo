@@ -11,6 +11,7 @@ import (
 	"github.com/apetsko/shortugo/internal/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zapcore"
 )
 
 func decompressGzip(data []byte) (string, error) {
@@ -47,7 +48,7 @@ func TestGzipMiddleware_JSON(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	zlogger, err := logging.New()
+	zlogger, err := logging.New(zapcore.DebugLevel)
 	require.NoError(t, err)
 
 	gzipWithLogger := GzipMiddleware(zlogger)
@@ -81,7 +82,7 @@ func TestGzipMiddleware_HTML(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 
-	zlogger, err := logging.New()
+	zlogger, err := logging.New(zapcore.DebugLevel)
 	require.NoError(t, err)
 
 	gzipWithLogger := GzipMiddleware(zlogger)
@@ -116,7 +117,7 @@ func TestGzipMiddleware_Text(t *testing.T) {
 	req.Header.Set("Accept-Encoding", "gzip")
 	rr := httptest.NewRecorder()
 
-	zlogger, err := logging.New()
+	zlogger, err := logging.New(zapcore.DebugLevel)
 	require.NoError(t, err)
 
 	gzipWithLogger := GzipMiddleware(zlogger)

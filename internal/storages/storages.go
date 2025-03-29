@@ -18,7 +18,7 @@ type Storage interface {
 	DeleteUserURLs(ctx context.Context, IDs []string, userID string) (err error)
 }
 
-func Init(databaseDSN, fileStoragePath string, logger *logging.ZapLogger) (handlers.Storage, error) {
+func Init(databaseDSN, fileStoragePath string, logger *logging.Logger) (handlers.Storage, error) {
 	switch {
 	case databaseDSN != "":
 		s, err := postgres.New(databaseDSN)
@@ -41,7 +41,7 @@ func Init(databaseDSN, fileStoragePath string, logger *logging.ZapLogger) (handl
 	}
 }
 
-func StartBatchDeleteProcessor(ctx context.Context, s Storage, input <-chan models.BatchDeleteRequest, logger *logging.ZapLogger) {
+func StartBatchDeleteProcessor(ctx context.Context, s Storage, input <-chan models.BatchDeleteRequest, logger *logging.Logger) {
 	const (
 		batchSize = 100
 		timeout   = 2 * time.Second
@@ -73,7 +73,7 @@ func StartBatchDeleteProcessor(ctx context.Context, s Storage, input <-chan mode
 	}
 }
 
-func flushBatch(ctx context.Context, s Storage, batch *[]models.BatchDeleteRequest, logger *logging.ZapLogger) {
+func flushBatch(ctx context.Context, s Storage, batch *[]models.BatchDeleteRequest, logger *logging.Logger) {
 	if len(*batch) == 0 {
 		return
 	}

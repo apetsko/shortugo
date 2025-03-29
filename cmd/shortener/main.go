@@ -8,18 +8,21 @@ import (
 	"github.com/apetsko/shortugo/internal/config"
 	"github.com/apetsko/shortugo/internal/handlers"
 	"github.com/apetsko/shortugo/internal/storages"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/apetsko/shortugo/internal/logging"
 	"github.com/apetsko/shortugo/internal/server"
 )
 
 func main() {
-	logger, err := logging.New()
+	logger, err := logging.New(zapcore.DebugLevel)
 	if err != nil {
 		log.Fatal("Failed to initialize logger:", err)
 	}
 
-	cfg, err := config.Parse()
+	logger.Infof("Starting server with LogLevel: %s", zapcore.DebugLevel)
+
+	cfg, err := config.New()
 	if err != nil {
 		logger.Fatal(err.Error())
 	}

@@ -48,7 +48,7 @@ func (cr *compressReader) Close() error {
 	return cr.zr.Close()
 }
 
-func GzipMiddleware(logger *logging.ZapLogger) func(http.Handler) http.Handler {
+func GzipMiddleware(logger *logging.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		gzipWithLogger := func(w http.ResponseWriter, r *http.Request) {
 			if strings.Contains(r.Header.Get("Content-Encoding"), "gzip") {

@@ -9,7 +9,27 @@ import (
 	"github.com/gorilla/securecookie"
 )
 
+type Authenticator interface {
+	UserIDFromCookie(r *http.Request, secret string) (string, error)
+}
+
+type Auth struct{}
+
 var ErrNoUserIDFound = errors.New("no user ID found in cookie")
+
+func (a *Auth) UserIDFromCookie(r *http.Request, secret string) (string, error) {
+	cookie, err := r.Cookie("shortugo")
+	if err != nil {
+		return "", err
+	}
+
+	userID, err := readUserID(cookie, secret)
+	if err != nil {
+		err = fmt.Errorf("failed get userid from cookie: %w", err)
+		return "", err
+	}
+	return userID, nil
+}
 
 func securedCookie(secret string) *securecookie.SecureCookie {
 	secretLen := 32
@@ -39,20 +59,6 @@ func SetCookie(w http.ResponseWriter, secret string) (userID string, err error) 
 		HttpOnly: true,
 		Path:     "/",
 	})
-	return userID, nil
-}
-
-func UserIDFromCookie(r *http.Request, secret string) (string, error) {
-	cookie, err := r.Cookie("shortugo")
-	if err != nil {
-		return "", err
-	}
-
-	userID, err := readUserID(cookie, secret)
-	if err != nil {
-		err = fmt.Errorf("failed get userid from cookie: %w", err)
-		return "", err
-	}
 	return userID, nil
 }
 

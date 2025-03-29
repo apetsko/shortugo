@@ -11,7 +11,7 @@ import (
 )
 
 func (h *URLHandler) ListUserURLs(w http.ResponseWriter, r *http.Request) {
-	userID, err := auth.UserIDFromCookie(r, h.secret)
+	userID, err := h.auth.UserIDFromCookie(r, h.secret)
 	if err != nil {
 		userID, err = auth.SetCookie(w, h.secret)
 		if err != nil {

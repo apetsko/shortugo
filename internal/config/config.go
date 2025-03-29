@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/apetsko/shortugo/internal/utils"
 	"github.com/caarlos0/env/v11"
 )
 
@@ -15,7 +16,9 @@ type Config struct {
 	Secret          string `env:"SECRET"`
 }
 
-func Parse() (c Config, err error) {
+func New() (*Config, error) {
+	var c Config
+
 	flag.StringVar(&c.Host, "a", "localhost:8080", "network address with port")
 	flag.StringVar(&c.BaseURL, "b", "http://localhost:8080", "base url address")
 	flag.StringVar(&c.FileStoragePath, "f", "db.json", "file storages name")
@@ -24,8 +27,12 @@ func Parse() (c Config, err error) {
 
 	flag.Parse()
 
-	if err = env.Parse(&c); err != nil {
-		return c, fmt.Errorf("error while parse envs: %w", err)
+	if err := env.Parse(&c); err != nil {
+		return nil, fmt.Errorf("failed to load environment: %w", err)
 	}
-	return c, nil
+
+	if err := utils.ValidateStruct(c); err != nil {
+		return nil, err
+	}
+	return &c, nil
 }

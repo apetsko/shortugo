@@ -6,6 +6,8 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
+
+	"github.com/go-playground/validator/v10"
 )
 
 func GenerateID(s string, length int) (id string) {
@@ -26,4 +28,8 @@ func GenerateUserID(length int) (id string, err error) {
 	id = hex.EncodeToString(r)
 
 	return id, nil
+}
+
+func ValidateStruct(a any) error {
+	return validator.New().Struct(a)
 }

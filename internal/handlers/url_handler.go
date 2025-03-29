@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 
+	"github.com/apetsko/shortugo/internal/auth"
 	"github.com/apetsko/shortugo/internal/logging"
 	"github.com/apetsko/shortugo/internal/models"
 )
@@ -18,15 +19,17 @@ type Storage interface {
 }
 
 type URLHandler struct {
+	auth     auth.Authenticator
 	baseURL  string
 	storage  Storage
 	secret   string
 	ToDelete chan models.BatchDeleteRequest
-	Logger   *logging.ZapLogger
+	Logger   *logging.Logger
 }
 
-func NewURLHandler(baseURL string, s Storage, l *logging.ZapLogger, secret string) *URLHandler {
+func NewURLHandler(baseURL string, s Storage, l *logging.Logger, secret string) *URLHandler {
 	return &URLHandler{
+		auth:     new(auth.Auth),
 		baseURL:  baseURL,
 		storage:  s,
 		Logger:   l,

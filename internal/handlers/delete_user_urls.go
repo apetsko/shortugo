@@ -2,16 +2,14 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
-	"github.com/apetsko/shortugo/internal/auth"
 	"github.com/apetsko/shortugo/internal/models"
 )
 
 func (h *URLHandler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
-	userID, err := auth.UserIDFromCookie(r, h.secret)
+	userID, err := h.auth.UserIDFromCookie(r, h.secret)
 	if err != nil {
 		h.Logger.Error(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)
@@ -38,7 +36,7 @@ func (h *URLHandler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	w.WriteHeader(http.StatusAccepted)
-	if _, err := fmt.Fprintf(w, "%v", ids); err != nil {
+	if err := json.NewEncoder(w).Encode(ids); err != nil {
 		h.Logger.Error(err.Error())
 	}
 }

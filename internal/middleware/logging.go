@@ -15,16 +15,14 @@ type responseData struct {
 }
 
 type loggingResponseWriter struct {
-	logger logger
 	http.ResponseWriter
 	responseData *responseData
 }
 
-func newLoggingResponseWriter(w http.ResponseWriter, logger logger) *loggingResponseWriter {
+func newLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
 	return &loggingResponseWriter{
 		ResponseWriter: w,
-		logger:         logger,
-		responseData:   &responseData{},
+		responseData:   &responseData{status: http.StatusOK}, // Значение по умолчанию
 	}
 }
 
@@ -41,22 +39,20 @@ func (r *loggingResponseWriter) WriteHeader(statusCode int) {
 
 func LoggingMiddleware(logger logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
-		logFn := func(w http.ResponseWriter, r *http.Request) {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 
-			lw := newLoggingResponseWriter(w, logger)
-
+			lw := newLoggingResponseWriter(w)
 			next.ServeHTTP(lw, r)
 
-			lw.logger.Info(
-				"middleware logger",
+			logger.Info(
+				r.Method,
 				"uri", r.RequestURI,
-				"method", r.Method,
-				"status", lw.responseData.status,
-				"duration", time.Since(start).Nanoseconds(),
+				"UserID", r.Header.Get("UserID"),
+				"duration_ms", time.Since(start).Milliseconds(),
 				"size", lw.responseData.size,
+				"status", lw.responseData.status,
 			)
-		}
-		return http.HandlerFunc(logFn)
+		})
 	}
 }

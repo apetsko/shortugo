@@ -10,14 +10,61 @@ import (
 	"testing"
 
 	"github.com/apetsko/shortugo/internal/logging"
+	"github.com/apetsko/shortugo/internal/mocks"
 	"github.com/apetsko/shortugo/internal/models"
 	"github.com/apetsko/shortugo/internal/storages/inmem"
+	"github.com/apetsko/shortugo/internal/storages/shared"
+	"github.com/apetsko/shortugo/internal/utils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zapcore"
 )
 
+func BenchmarkShortenJSON(b *testing.B) {
+	logger, _ := logging.New(zapcore.DebugLevel)
+	mockStorage := new(mocks.Storage)
+	mockAuth := new(mocks.Authenticator)
+	h := &URLHandler{
+		storage: mockStorage,
+		Logger:  logger,
+		baseURL: "http://localhost",
+		secret:  "some-secret",
+		auth:    mockAuth,
+	}
+
+	mockAuth.On("UserIDFromCookie", mock.Anything, "some-secret").Return("user-id", nil)
+	mockStorage.On("Get", mock.Anything, mock.Anything).Return("", shared.ErrNotFound)
+	mockStorage.On("Put", mock.Anything, mock.Anything).Return(nil)
+
+	record := models.URLRecord{
+		URL: "https://example.com",
+	}
+	requestBody, _ := json.Marshal(record)
+
+	for i := 0; i < b.N; i++ {
+		req := httptest.NewRequest("POST", "/api/shorten", bytes.NewReader(requestBody))
+		w := httptest.NewRecorder()
+
+		h.ShortenJSON(w, req)
+
+		resp := w.Result()
+		assert.Equal(b, http.StatusCreated, resp.StatusCode, "Status code should be 201 Created")
+
+		body, err := io.ReadAll(resp.Body)
+		assert.NoError(b, err, "Reading response body should not return an error")
+		resp.Body.Close()
+
+		var result models.Result
+		err = json.Unmarshal(body, &result)
+		assert.NoError(b, err, "Unmarshaling response body should not return an error")
+		assert.Contains(b, result.Result, h.baseURL, "Result should contain the base URL")
+		assert.Contains(b, result.Result, utils.GenerateID(record.URL, 8), "Result should contain the generated ID")
+	}
+}
+
 func TestURLHandler_ShortenJSON(t *testing.T) {
-	logger, err := logging.New()
+	logger, err := logging.New(zapcore.DebugLevel)
 	if err != nil {
 		log.Fatal("Failed to initialize logger:", err)
 	}
