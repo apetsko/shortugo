@@ -1,16 +1,14 @@
 package handlers
 
 import (
-	"context"
-	"log"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/apetsko/shortugo/internal/logging"
 	"github.com/apetsko/shortugo/internal/mocks"
-	"github.com/apetsko/shortugo/internal/models"
-	"github.com/apetsko/shortugo/internal/storages/inmem"
+	"github.com/apetsko/shortugo/internal/storages/shared"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"go.uber.org/zap/zapcore"
@@ -42,46 +40,69 @@ func BenchmarkExpandURL(b *testing.B) {
 	}
 }
 
-func TestURLHandler_ExpandURL(t *testing.T) {
-	logger, err := logging.New(zapcore.DebugLevel)
-	if err != nil {
-		log.Fatal("Failed to initialize logger:", err)
+func TestExpandURL(t *testing.T) {
+	mockStorage := new(mocks.Storage)
+	logger, _ := logging.New(zapcore.DebugLevel)
+	h := &URLHandler{
+		storage: mockStorage,
+		Logger:  logger,
 	}
 
-	u := "http://localhost:8080"
-	handler := NewURLHandler(u, inmem.New(), logger, "fortytwo")
-	type want struct {
-		code     int
-		Location string
-		URL      string
-	}
 	tests := []struct {
-		name   string
-		record models.URLRecord
-		want   want
+		name           string
+		urlID          string
+		mockReturn     string
+		mockError      error
+		expectedStatus int
+		validate       func(*httptest.ResponseRecorder)
 	}{
 		{
-			name:   "positive test #1",
-			record: models.URLRecord{ID: "QrPnX5IU", URL: "https://practicum.yandex.ru/", UserID: "55"},
-			want: want{
-				code:     307,
-				Location: "https://practicum.yandex.ru/",
-				URL:      "http://localhost:8080/QrPnX5IU",
+			name:           "successful redirect",
+			urlID:          "test-id",
+			mockReturn:     "http://example.com",
+			mockError:      nil,
+			expectedStatus: http.StatusTemporaryRedirect,
+			validate: func(w *httptest.ResponseRecorder) {
+				assert.Equal(t, "http://example.com", w.Header().Get("Location"))
 			},
 		},
+		{
+			name:           "URL gone",
+			urlID:          "expired-id",
+			mockReturn:     "",
+			mockError:      shared.ErrGone,
+			expectedStatus: http.StatusGone,
+		},
+		{
+			name:           "URL not found",
+			urlID:          "missing-id",
+			mockReturn:     "",
+			mockError:      shared.ErrNotFound,
+			expectedStatus: http.StatusNotFound,
+		},
+		{
+			name:           "internal error",
+			urlID:          "error-id",
+			mockReturn:     "",
+			mockError:      errors.New("database error"),
+			expectedStatus: http.StatusInternalServerError,
+		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			_ = handler.storage.Put(context.Background(), test.record)
-			request := httptest.NewRequest(http.MethodGet, test.want.URL, nil)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockStorage.On("Get", mock.Anything, tt.urlID).Return(tt.mockReturn, tt.mockError)
+
 			w := httptest.NewRecorder()
-			handler.ExpandURL(w, request)
+			r := httptest.NewRequest(http.MethodGet, "/"+tt.urlID, nil)
 
-			res := w.Result()
-			defer res.Body.Close()
+			h.ExpandURL(w, r)
 
-			assert.Equal(t, test.want.code, res.StatusCode)
-			assert.Equal(t, test.want.Location, res.Header.Get("Location"))
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			if tt.validate != nil {
+				tt.validate(w)
+			}
 		})
 	}
 }

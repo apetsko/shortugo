@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"slices"
-	"strings"
 	"sync"
 
 	"github.com/apetsko/shortugo/internal/models"
@@ -120,11 +119,12 @@ func (f *Storage) Get(ctx context.Context, shortURL string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("failed unmarshal: %w", err)
 		}
-
+		fmt.Println("r", r)
 		if r.ID == shortURL {
 			if r.Deleted {
 				return "", errors.New(http.StatusText(http.StatusGone))
 			}
+
 			return r.URL, nil
 		}
 	}
@@ -175,35 +175,98 @@ func (f *Storage) DeleteUserURLs(ctx context.Context, ids []string, userID strin
 		return err
 	}
 
+	tmpFilename := f.file.Name() + ".tmp"
+	tmpFile, err := os.OpenFile(tmpFilename, os.O_CREATE|os.O_WRONLY, FilePermUserRWGroupROthersR)
+	if err != nil {
+		return fmt.Errorf("error creating temp file: %w", err)
+	}
+	defer os.Remove(tmpFilename)
+	defer tmpFile.Close()
+
+	if err := f.copyAndMarkDeleted(tmpFile, ids, userID); err != nil {
+		return err
+	}
+
+	if err := f.replaceFile(tmpFilename); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (f *Storage) copyAndMarkDeleted(tmpFile *os.File, ids []string, userID string) error {
 	if _, err := f.file.Seek(0, 0); err != nil {
 		return fmt.Errorf("error setting file seek: %w", err)
 	}
 
-	var offset int64
-
-	r := new(models.URLRecord)
 	scanner := bufio.NewScanner(f.file)
+	writer := bufio.NewWriter(tmpFile)
+
 	for scanner.Scan() {
-		data := scanner.Bytes()
-		if err := json.Unmarshal(data, r); err != nil {
+		r, err := f.parseRecord(scanner.Bytes())
+		if err != nil {
 			return err
 		}
 
-		if r.UserID == userID && slices.Contains(ids, r.ID) && !r.Deleted {
-			res := strings.Replace(string(data), `"deleted":false`, `"deleted":true `, 1)
-			if _, err := f.file.Seek(offset, 0); err != nil {
-				return fmt.Errorf("error setting file seek: %w", err)
-			}
-			if _, err := f.file.WriteString(res); err != nil {
-				return fmt.Errorf("error writing updated record to file: %w", err)
-			}
-			offset, _ = f.file.Seek(0, 1)
+		if shouldDelete(r, ids, userID) {
+			r.Deleted = true
+		}
+
+		if err := writeRecord(writer, r); err != nil {
+			return err
 		}
 	}
 
 	if err := scanner.Err(); err != nil {
 		return fmt.Errorf("error reading file: %w", err)
 	}
+
+	return writer.Flush()
+}
+
+func shouldDelete(r *models.URLRecord, ids []string, userID string) bool {
+	return r.UserID == userID && slices.Contains(ids, r.ID) && !r.Deleted
+}
+
+func (f *Storage) parseRecord(line []byte) (*models.URLRecord, error) {
+	r := new(models.URLRecord)
+	if err := json.Unmarshal(line, r); err != nil {
+		return nil, err
+	}
+	return r, nil
+}
+
+func writeRecord(writer *bufio.Writer, r *models.URLRecord) error {
+	newLine, err := json.Marshal(r)
+	if err != nil {
+		return err
+	}
+
+	if _, err := writer.Write(newLine); err != nil {
+		return fmt.Errorf("error writing updated record to temp file: %w", err)
+	}
+
+	if _, err := writer.WriteString("\n"); err != nil {
+		return fmt.Errorf("error writing newline to temp file: %w", err)
+	}
+
+	return nil
+}
+
+func (f *Storage) replaceFile(tmpFilename string) error {
+	f.file.Close()
+
+	if err := os.Rename(tmpFilename, f.file.Name()); err != nil {
+		return fmt.Errorf("error replacing storage file: %w", err)
+	}
+
+	var err error
+	f.file, err = os.OpenFile(f.file.Name(), os.O_RDWR|os.O_CREATE|os.O_APPEND, FilePermUserRWGroupROthersR)
+	if err != nil {
+		return fmt.Errorf("error reopening storage file: %w", err)
+	}
+	f.encoder = json.NewEncoder(f.file)
+
 	return nil
 }
 

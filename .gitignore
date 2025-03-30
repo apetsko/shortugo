@@ -30,3 +30,4 @@ golangci-lint
 
 /.golangci.bck.yml
 
+/coverage.html

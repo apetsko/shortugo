@@ -3,8 +3,9 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,12 +13,10 @@ import (
 	"github.com/apetsko/shortugo/internal/logging"
 	"github.com/apetsko/shortugo/internal/mocks"
 	"github.com/apetsko/shortugo/internal/models"
-	"github.com/apetsko/shortugo/internal/storages/inmem"
 	"github.com/apetsko/shortugo/internal/storages/shared"
 	"github.com/apetsko/shortugo/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -33,7 +32,7 @@ func BenchmarkShortenJSON(b *testing.B) {
 		auth:    mockAuth,
 	}
 
-	mockAuth.On("UserIDFromCookie", mock.Anything, "some-secret").Return("user-id", nil)
+	mockAuth.On("CookieGetUserID", mock.Anything, "some-secret").Return("user-id", nil)
 	mockStorage.On("Get", mock.Anything, mock.Anything).Return("", shared.ErrNotFound)
 	mockStorage.On("Put", mock.Anything, mock.Anything).Return(nil)
 
@@ -62,56 +61,142 @@ func BenchmarkShortenJSON(b *testing.B) {
 		assert.Contains(b, result.Result, utils.GenerateID(record.URL, 8), "Result should contain the generated ID")
 	}
 }
+func TestShortenJSON(t *testing.T) {
+	IDlen := 8
+	shortenID := utils.GenerateID("http://example.com", IDlen)
+	baseURL := "http://short.ly"
+	shortenURL := fmt.Sprintf(`{"result":"%s/%s"}`, baseURL, shortenID)
 
-func TestURLHandler_ShortenJSON(t *testing.T) {
-	logger, err := logging.New(zapcore.DebugLevel)
-	if err != nil {
-		log.Fatal("Failed to initialize logger:", err)
-	}
-
-	u := "http://localhost:8080"
-	handler := NewURLHandler(u, inmem.New(), logger, "fortytwo")
-	type want struct {
-		ID          string
-		code        int
-		ContentType string
-	}
 	tests := []struct {
-		name   string
-		record models.URLRecord
-		want   want
+		name             string
+		mockAuthSetup    func(mockAuth *mocks.Authenticator)
+		mockStorageSetup func(mockStorage *mocks.Storage)
+		requestBody      string
+		expectedStatus   int
+		expectedBody     string
 	}{
 		{
-			name:   "positive test #1",
-			record: models.URLRecord{URL: "https://practicum.yandex.ru/,", UserID: "55"},
-			want: want{
-				code:        201,
-				ID:          "http://localhost:8080/3P9NwpqM",
-				ContentType: "application/json",
+			name: "successful URL shortening",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("user123", nil)
 			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {
+				mockStorage.On("Get", mock.Anything, shortenID).Return("", shared.ErrNotFound)
+				mockStorage.On("Put", mock.Anything, mock.Anything).Return(nil)
+			},
+			requestBody:    `{"url":"http://example.com"}`,
+			expectedStatus: http.StatusCreated,
+			expectedBody:   shortenURL,
+		},
+		{
+			name: "duplicate URL returns conflict",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("user123", nil)
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {
+				mockStorage.On("Get", mock.Anything, shortenID).Return("http://short.ly/shortID", nil)
+			},
+			requestBody:    `{"url":"http://example.com"}`,
+			expectedStatus: http.StatusConflict,
+			expectedBody:   shortenURL,
+		},
+		{
+			name: "auth error",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("", errors.New("auth error"))
+				mockAuth.On("CookieSetUserID", mock.Anything, mock.Anything).Return("", errors.New("auth error"))
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {},
+			requestBody:      `{"url":"http://example.com"}`,
+			expectedStatus:   http.StatusInternalServerError,
+		},
+		{
+			name: "bad request on empty body",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("user123", nil)
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {},
+			requestBody:      ``,
+			expectedStatus:   http.StatusBadRequest,
+		},
+		{
+			name: "bad request on invalid JSON",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("user123", nil)
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {},
+			requestBody:      `{"url":123}`,
+			expectedStatus:   http.StatusBadRequest,
+		},
+		{
+			name: "bad request on empty URL",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("user123", nil)
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {},
+			requestBody:      `{"url":""}`,
+			expectedStatus:   http.StatusBadRequest,
+		},
+		{
+			name: "error storing URL",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("user123", nil)
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {
+				mockStorage.On("Get", mock.Anything, shortenID).Return("", shared.ErrNotFound)
+				mockStorage.On("Put", mock.Anything, mock.Anything).Return(errors.New("storage error"))
+			},
+			requestBody:    `{"url":"http://example.com"}`,
+			expectedStatus: http.StatusBadRequest,
+		},
+		{
+			name: "error getting URL from storage",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("user123", nil)
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {
+				mockStorage.On("Get", mock.Anything, shortenID).Return("", errors.New("storage error"))
+			},
+			requestBody:    `{"url":"http://example.com"}`,
+			expectedStatus: http.StatusInternalServerError,
 		},
 	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			url, err := json.Marshal(test.record)
-			require.NoError(t, err)
-			request := httptest.NewRequest(http.MethodPost, test.want.ID, bytes.NewBuffer(url))
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockAuth := new(mocks.Authenticator)
+			mockStorage := new(mocks.Storage)
+			logger, _ := logging.New(zapcore.DebugLevel)
+
+			h := &URLHandler{
+				auth:    mockAuth,
+				storage: mockStorage,
+				Logger:  logger,
+				baseURL: baseURL,
+			}
+
+			if tt.mockAuthSetup != nil {
+				tt.mockAuthSetup(mockAuth)
+			}
+			if tt.mockStorageSetup != nil {
+				tt.mockStorageSetup(mockStorage)
+			}
+
 			w := httptest.NewRecorder()
-			handler.ShortenJSON(w, request)
-			res := w.Result()
-			assert.Equal(t, test.want.code, res.StatusCode)
+			r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(tt.requestBody))
+			h.ShortenJSON(w, r)
 
-			defer res.Body.Close()
+			assert.Equal(t, tt.expectedStatus, w.Code)
 
-			b, err := io.ReadAll(res.Body)
-			require.NoError(t, err)
+			if tt.expectedBody != "" {
+				var expectedJSON, actualJSON map[string]string
+				err := json.Unmarshal([]byte(tt.expectedBody), &expectedJSON)
+				assert.NoError(t, err)
+				err = json.Unmarshal(w.Body.Bytes(), &actualJSON)
+				assert.NoError(t, err)
 
-			var resp models.Result
-			err = json.Unmarshal(b, &resp)
-			require.NoError(t, err)
-
-			assert.Equal(t, test.want.ContentType, res.Header.Get("Content-Type"))
-			assert.Equal(t, test.want.ID, resp.Result)
+				assert.Equal(t, expectedJSON, actualJSON)
+			}
 		})
 	}
 }

@@ -3,8 +3,7 @@ package handlers
 import "net/http"
 
 func (h *URLHandler) PingDB(w http.ResponseWriter, r *http.Request) {
-	err := h.storage.Ping()
-	if err != nil {
+	if err := h.storage.Ping(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

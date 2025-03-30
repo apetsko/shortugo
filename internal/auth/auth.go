@@ -10,24 +10,30 @@ import (
 )
 
 type Authenticator interface {
-	UserIDFromCookie(r *http.Request, secret string) (string, error)
+	CookieGetUserID(r *http.Request, secret string) (string, error)
+	CookieSetUserID(w http.ResponseWriter, secret string) (userID string, err error)
 }
 
 type Auth struct{}
 
 var ErrNoUserIDFound = errors.New("no user ID found in cookie")
 
-func (a *Auth) UserIDFromCookie(r *http.Request, secret string) (string, error) {
+func (a *Auth) CookieGetUserID(r *http.Request, secret string) (string, error) {
 	cookie, err := r.Cookie("shortugo")
 	if err != nil {
+		return "", http.ErrNoCookie
+	}
+
+	sc := securedCookie(secret)
+
+	var userID string
+
+	err = sc.Decode("shortugo", cookie.Value, &userID)
+	if err != nil || userID == "" {
+		err = fmt.Errorf("%w: %w", ErrNoUserIDFound, err)
 		return "", err
 	}
 
-	userID, err := readUserID(cookie, secret)
-	if err != nil {
-		err = fmt.Errorf("failed get userid from cookie: %w", err)
-		return "", err
-	}
 	return userID, nil
 }
 
@@ -38,7 +44,7 @@ func securedCookie(secret string) *securecookie.SecureCookie {
 	return securecookie.New(sharedSecret, sharedSecret)
 }
 
-func SetCookie(w http.ResponseWriter, secret string) (userID string, err error) {
+func (a *Auth) CookieSetUserID(w http.ResponseWriter, secret string) (userID string, err error) {
 	sc := securedCookie(secret)
 
 	userIDLen := 8
@@ -59,19 +65,5 @@ func SetCookie(w http.ResponseWriter, secret string) (userID string, err error) 
 		HttpOnly: true,
 		Path:     "/",
 	})
-	return userID, nil
-}
-
-func readUserID(cookie *http.Cookie, secret string) (string, error) {
-	var userID string
-	sc := securedCookie(secret)
-	if err := sc.Decode("shortugo", cookie.Value, &userID); err != nil {
-		err = fmt.Errorf("%w: %w", ErrNoUserIDFound, err)
-		return "", err
-	}
-
-	if userID == "" {
-		return "", ErrNoUserIDFound
-	}
 	return userID, nil
 }

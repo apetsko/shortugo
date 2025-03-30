@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -32,7 +34,7 @@ func BenchmarkShortenURL(b *testing.B) {
 		auth:    mockAuth,
 	}
 
-	mockAuth.On("UserIDFromCookie", mock.Anything, "some-secret").Return("user-id", nil)
+	mockAuth.On("CookieGetUserID", mock.Anything, "some-secret").Return("user-id", nil)
 	mockStorage.On("Get", mock.Anything, mock.Anything).Return("", shared.ErrNotFound)
 	mockStorage.On("Put", mock.Anything, mock.Anything).Return(nil)
 
@@ -96,6 +98,131 @@ func TestURLHandler_ShortenURL(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, test.want.ID, string(resBody))
+		})
+	}
+}
+
+func TestShortenURL(t *testing.T) {
+	IDlen := 8
+	shortenID := utils.GenerateID("http://example.com", IDlen)
+	baseURL := "http://short.ly"
+	shortenURL := fmt.Sprintf("%s/%s", baseURL, shortenID)
+
+	tests := []struct {
+		name             string
+		mockAuthSetup    func(mockAuth *mocks.Authenticator)
+		mockStorageSetup func(mockStorage *mocks.Storage)
+		requestBody      string
+		expectedStatus   int
+		expectedBody     string
+	}{
+		{
+			name: "successful URL shortening",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("user123", nil)
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {
+				mockStorage.On("Get", mock.Anything, shortenID).Return("", shared.ErrNotFound)
+				mockStorage.On("Put", mock.Anything, mock.Anything).Return(nil)
+			},
+			requestBody:    "http://example.com",
+			expectedStatus: http.StatusCreated,
+			expectedBody:   shortenURL,
+		},
+		{
+			name: "duplicate URL returns conflict",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("user123", nil)
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {
+				mockStorage.On("Get", mock.Anything, shortenID).Return("http://short.ly/shortID", nil)
+			},
+			requestBody:    "http://example.com",
+			expectedStatus: http.StatusConflict,
+			expectedBody:   shortenURL,
+		},
+		{
+			name: "auth error",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("", errors.New("auth error"))
+				mockAuth.On("CookieSetUserID", mock.Anything, mock.Anything).Return("", errors.New("auth error"))
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {},
+			requestBody:      "http://example.com",
+			expectedStatus:   http.StatusInternalServerError,
+		},
+		{
+			name: "bad request on empty body",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("user123", nil)
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {},
+			requestBody:      "",
+			expectedStatus:   http.StatusBadRequest,
+		},
+		{
+			name: "bad request on empty URL",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("user123", nil)
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {},
+			requestBody:      "",
+			expectedStatus:   http.StatusBadRequest,
+		},
+		{
+			name: "error storing URL",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("user123", nil)
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {
+				mockStorage.On("Get", mock.Anything, shortenID).Return("", shared.ErrNotFound)
+				mockStorage.On("Put", mock.Anything, mock.Anything).Return(errors.New("storage error"))
+			},
+			requestBody:    "http://example.com",
+			expectedStatus: http.StatusInternalServerError,
+		},
+		{
+			name: "error getting URL from storage",
+			mockAuthSetup: func(mockAuth *mocks.Authenticator) {
+				mockAuth.On("CookieGetUserID", mock.Anything, mock.Anything).Return("user123", nil)
+			},
+			mockStorageSetup: func(mockStorage *mocks.Storage) {
+				mockStorage.On("Get", mock.Anything, shortenID).Return("", errors.New("storage error"))
+			},
+			requestBody:    "http://example.com",
+			expectedStatus: http.StatusInternalServerError,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockAuth := new(mocks.Authenticator)
+			mockStorage := new(mocks.Storage)
+			logger, _ := logging.New(zapcore.DebugLevel)
+
+			h := &URLHandler{
+				auth:    mockAuth,
+				storage: mockStorage,
+				Logger:  logger,
+				baseURL: baseURL,
+			}
+
+			if tt.mockAuthSetup != nil {
+				tt.mockAuthSetup(mockAuth)
+			}
+			if tt.mockStorageSetup != nil {
+				tt.mockStorageSetup(mockStorage)
+			}
+
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(tt.requestBody))
+			h.ShortenURL(w, r)
+
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			if tt.expectedBody != "" {
+				assert.Equal(t, tt.expectedBody, w.Body.String())
+			}
 		})
 	}
 }

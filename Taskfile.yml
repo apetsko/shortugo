@@ -14,6 +14,16 @@ tasks:
       - golangci-lint run --config .golangci2.yml
     silent: true
 
+  cover:
+    desc: Check test coverage
+    cmds:
+
+      - go test ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
+      - go-test-coverage --config=./.testcoverage.yml
+      - go tool cover -html=cover.out -o coverage.html
+
+    silent: true
+
   build:
     desc: build project
     dir: cmd/shortener
@@ -49,3 +59,5 @@ tasks:
       - ./shortenertest -test.v -test.run=^TestIteration14$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
       - ./shortenertest -test.v -test.run=^TestIteration15$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
       - ./shortenertest -test.v -test.run=^TestIteration16$ -source-path="."
+      - ./shortenertest -test.v -test.run=^TestIteration17$ -source-path="."
+      - ./shortenertest -test.v -test.run=^TestIteration18$ -source-path="."

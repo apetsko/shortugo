@@ -13,7 +13,7 @@ func Router(handler *handlers.URLHandler) *chi.Mux {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
-	r.Use(mw.LoggingMiddleware(handler.Logger))
+	r.Use(mw.LogMiddleware(handler.Logger))
 	r.Use(mw.GzipMiddleware(handler.Logger))
 
 	r.Post("/", handler.ShortenURL)

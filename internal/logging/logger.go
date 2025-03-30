@@ -24,7 +24,7 @@ func New(level zapcore.Level) (*Logger, error) {
 	config.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	config.Level.SetLevel(level)
 
-	logger, err := config.Build(zap.AddCaller(), zap.AddCallerSkip(1)) // Добавляем AddCaller и сдвиг
+	logger, err := config.Build(zap.AddCaller(), zap.AddCallerSkip(1))
 	if err != nil {
 		return nil, err
 	}

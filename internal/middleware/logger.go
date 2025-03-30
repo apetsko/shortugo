@@ -14,35 +14,35 @@ type responseData struct {
 	size   int
 }
 
-type loggingResponseWriter struct {
+type logResponseWriter struct {
 	http.ResponseWriter
 	responseData *responseData
 }
 
-func newLoggingResponseWriter(w http.ResponseWriter) *loggingResponseWriter {
-	return &loggingResponseWriter{
+func newLogResponseWriter(w http.ResponseWriter) *logResponseWriter {
+	return &logResponseWriter{
 		ResponseWriter: w,
-		responseData:   &responseData{status: http.StatusOK}, // Значение по умолчанию
+		responseData:   &responseData{status: http.StatusOK},
 	}
 }
 
-func (r *loggingResponseWriter) Write(b []byte) (int, error) {
+func (r *logResponseWriter) Write(b []byte) (int, error) {
 	size, err := r.ResponseWriter.Write(b)
 	r.responseData.size += size
 	return size, err
 }
 
-func (r *loggingResponseWriter) WriteHeader(statusCode int) {
+func (r *logResponseWriter) WriteHeader(statusCode int) {
 	r.ResponseWriter.WriteHeader(statusCode)
 	r.responseData.status = statusCode
 }
 
-func LoggingMiddleware(logger logger) func(http.Handler) http.Handler {
+func LogMiddleware(logger logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 
-			lw := newLoggingResponseWriter(w)
+			lw := newLogResponseWriter(w)
 			next.ServeHTTP(lw, r)
 
 			logger.Info(

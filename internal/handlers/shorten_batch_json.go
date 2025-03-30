@@ -6,15 +6,14 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/apetsko/shortugo/internal/auth"
 	"github.com/apetsko/shortugo/internal/models"
 	"github.com/apetsko/shortugo/internal/utils"
 )
 
 func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
-	userID, err := h.auth.UserIDFromCookie(r, h.secret)
+	userID, err := h.auth.CookieGetUserID(r, h.secret)
 	if err != nil {
-		userID, err = auth.SetCookie(w, h.secret)
+		userID, err = h.auth.CookieSetUserID(w, h.secret)
 		if err != nil {
 			h.Logger.Error(err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
@@ -59,11 +58,12 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		var record models.URLRecord
-		record.URL = req.OriginalURL
 		IDlen := 8
-		record.ID = utils.GenerateID(record.URL, IDlen)
-		record.UserID = userID
+		var record = models.URLRecord{
+			URL:    req.OriginalURL,
+			ID:     utils.GenerateID(req.OriginalURL, IDlen),
+			UserID: userID,
+		}
 
 		records = append(records, record)
 

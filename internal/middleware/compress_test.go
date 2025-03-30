@@ -21,124 +21,79 @@ func decompressGzip(data []byte) (string, error) {
 	}
 	defer reader.Close()
 
-	buf := new(bytes.Buffer)
-
-	for {
-		_, err := io.CopyN(buf, reader, 1024)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-			return "", err
-		}
-	}
-
-	return buf.String(), nil
-}
-
-func TestGzipMiddleware_JSON(t *testing.T) {
-	jsonHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		_, err := w.Write([]byte(`{"message": "Hello, JSON!"}`))
-		require.NoError(t, err, "error write test response")
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/json", nil)
-	req.Header.Set("Accept-Encoding", "gzip")
-
-	rr := httptest.NewRecorder()
-
-	zlogger, err := logging.New(zapcore.DebugLevel)
-	require.NoError(t, err)
-
-	gzipWithLogger := GzipMiddleware(zlogger)
-	handler := gzipWithLogger(jsonHandler)
-
-	handler.ServeHTTP(rr, req)
-
-	res := rr.Result()
-	defer res.Body.Close()
-
-	require.Equal(t, res.Header.Get("Content-Encoding"), "gzip")
-
-	body, err := io.ReadAll(res.Body)
-	require.NoError(t, err, "Error reading response body")
-
-	expected := `{"message": "Hello, JSON!"}`
-	decompressed, err := decompressGzip(body)
-	require.NoError(t, err, "Failed to decompress response")
-	assert.Equal(t, expected, decompressed)
-}
-
-func TestGzipMiddleware_HTML(t *testing.T) {
-	htmlHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/html")
-		_, err := w.Write([]byte("<html><body><h1>Hello, HTML!</h1></body></html>"))
-		require.NoError(t, err, "error write test response")
-	})
-
-	req := httptest.NewRequest(http.MethodGet, "/html", nil)
-	req.Header.Set("Accept-Encoding", "gzip")
-
-	rr := httptest.NewRecorder()
-
-	zlogger, err := logging.New(zapcore.DebugLevel)
-	require.NoError(t, err)
-
-	gzipWithLogger := GzipMiddleware(zlogger)
-	handler := gzipWithLogger(htmlHandler)
-
-	handler.ServeHTTP(rr, req)
-
-	res := rr.Result()
-	defer res.Body.Close()
-
-	if res.Header.Get("Content-Encoding") != "gzip" {
-		t.Errorf("Expected Content-Encoding to be gzip, got %s", res.Header.Get("Content-Encoding"))
-	}
-
-	body, err := io.ReadAll(res.Body)
-	require.NoError(t, err, "Error reading response body")
-
-	expected := "<html><body><h1>Hello, HTML!</h1></body></html>"
-	decompressed, err := decompressGzip(body)
-	require.NoError(t, err, "Failed to decompress response")
-	assert.Equal(t, expected, decompressed)
-}
-
-func TestGzipMiddleware_Text(t *testing.T) {
-	textHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "text/plain")
-		w.WriteHeader(http.StatusOK)
-		_, err := w.Write([]byte("Hello, plain text!"))
-		require.NoError(t, err, "error write test response")
-	})
-	req := httptest.NewRequest(http.MethodGet, "/text", nil)
-	req.Header.Set("Accept-Encoding", "gzip")
-	rr := httptest.NewRecorder()
-
-	zlogger, err := logging.New(zapcore.DebugLevel)
-	require.NoError(t, err)
-
-	gzipWithLogger := GzipMiddleware(zlogger)
-	handler := gzipWithLogger(textHandler)
-
-	handler.ServeHTTP(rr, req)
-
-	res := rr.Result()
-	defer res.Body.Close()
-
-	if res.Header.Get("Content-Encoding") == "gzip" {
-		t.Errorf("Expected no gzip encoding for text response")
-	}
-
-	body, err := io.ReadAll(res.Body)
+	decompressed, err := io.ReadAll(reader)
 	if err != nil {
-		t.Fatal(err)
+		return "", err
+	}
+	return string(decompressed), nil
+}
+
+func TestGzipMiddleware(t *testing.T) {
+	testCases := []struct {
+		name         string
+		contentType  string
+		body         string
+		expectGzip   bool
+		expectedBody string
+	}{
+		{
+			name:         "JSON response",
+			contentType:  "application/json",
+			body:         `{"message": "Hello, JSON!"}`,
+			expectGzip:   true,
+			expectedBody: `{"message": "Hello, JSON!"}`,
+		},
+		{
+			name:         "HTML response",
+			contentType:  "text/html",
+			body:         "<html><body><h1>Hello, HTML!</h1></body></html>",
+			expectGzip:   true,
+			expectedBody: "<html><body><h1>Hello, HTML!</h1></body></html>",
+		},
+		{
+			name:         "Plain text response (no gzip)",
+			contentType:  "text/plain",
+			body:         "Hello, plain text!",
+			expectGzip:   false,
+			expectedBody: "Hello, plain text!",
+		},
 	}
 
-	expected := "Hello, plain text!"
-	if string(body) != expected {
-		t.Errorf("Expected body %q, got %q", expected, string(body))
+	logger, err := logging.New(zapcore.DebugLevel)
+	require.NoError(t, err)
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", tc.contentType)
+				_, err := w.Write([]byte(tc.body))
+				require.NoError(t, err, "error writing test response")
+			})
+
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.Header.Set("Accept-Encoding", "gzip")
+
+			rr := httptest.NewRecorder()
+			middleware := GzipMiddleware(logger)
+			middleware(handler).ServeHTTP(rr, req)
+
+			res := rr.Result()
+			defer res.Body.Close()
+
+			if tc.expectGzip {
+				assert.Equal(t, "gzip", res.Header.Get("Content-Encoding"), "Expected gzip encoding in response")
+				compressedBody, err := io.ReadAll(res.Body)
+				require.NoError(t, err, "Error reading response body")
+
+				decompressed, err := decompressGzip(compressedBody)
+				require.NoError(t, err, "Failed to decompress response")
+				assert.Equal(t, tc.expectedBody, decompressed)
+			} else {
+				assert.Empty(t, res.Header.Get("Content-Encoding"), "Expected no gzip encoding for response")
+				body, err := io.ReadAll(res.Body)
+				require.NoError(t, err, "Error reading response body")
+				assert.Equal(t, tc.expectedBody, string(body))
+			}
+		})
 	}
 }

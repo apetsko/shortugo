@@ -5,15 +5,14 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/apetsko/shortugo/internal/auth"
 	"github.com/apetsko/shortugo/internal/models"
 	"github.com/apetsko/shortugo/internal/storages/shared"
 )
 
 func (h *URLHandler) ListUserURLs(w http.ResponseWriter, r *http.Request) {
-	userID, err := h.auth.UserIDFromCookie(r, h.secret)
+	userID, err := h.auth.CookieGetUserID(r, h.secret)
 	if err != nil {
-		userID, err = auth.SetCookie(w, h.secret)
+		userID, err = h.auth.CookieSetUserID(w, h.secret)
 		if err != nil {
 			h.Logger.Error(err.Error())
 			w.WriteHeader(http.StatusInternalServerError)
@@ -27,12 +26,6 @@ func (h *URLHandler) ListUserURLs(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, shared.ErrNotFound) {
 			h.Logger.Error(err.Error())
 			w.WriteHeader(http.StatusNoContent)
-			return
-		}
-
-		if errors.Is(err, shared.ErrNotFound) {
-			h.Logger.Error(err.Error())
-			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 

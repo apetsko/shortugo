@@ -9,7 +9,7 @@ import (
 )
 
 func (h *URLHandler) DeleteUserURLs(w http.ResponseWriter, r *http.Request) {
-	userID, err := h.auth.UserIDFromCookie(r, h.secret)
+	userID, err := h.auth.CookieGetUserID(r, h.secret)
 	if err != nil {
 		h.Logger.Error(err.Error())
 		w.WriteHeader(http.StatusUnauthorized)

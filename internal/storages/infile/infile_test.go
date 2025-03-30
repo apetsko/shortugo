@@ -3,77 +3,122 @@ package infile
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/apetsko/shortugo/internal/models"
+	"github.com/apetsko/shortugo/internal/storages/shared"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_Put(t *testing.T) {
-	ifile, err := New("db_test.json")
-	require.NoError(t, err)
+func setupTempStorage(t *testing.T) (*Storage, func()) {
+	tmpFile, err := os.CreateTemp("", "test_storage")
+	require.NoError(t, err, "failed to create temp file")
 
-	tests := []models.URLRecord{
-		{URL: "mailto://EBlI.LUcE/nGW/CnKgralWM", ID: "EVvMeswX"},
-		{URL: "data://bNZlqPkX.zPr/AOYjayx/RXDZywCjbH", ID: "zrWsrYVK"},
-		{URL: "ftps://QhPSk.SERo/ASOuRTdh/XuXCUVcR", ID: "WrBTersI"},
-		{URL: "http://hwr.DqhY/qRpylA/BrBUqXwraQX", ID: "IZBF3Drj"},
-		{URL: "file://rSX.gQs/AoJCRUFJbS/HbkVkdDhHkSakU", ID: "B-_ig72W"},
-		{URL: "file://c.Hh/Oo/cAWXXgykO", ID: "ih4UOFRN"},
-		{URL: "http://rfcv.yZ/djwBnRy/GRvWfxKARJXqiIS", ID: "CnhlRf81"},
-		{URL: "sftp://zvJXD.xR/lUTNLwCMuL/ACaRzHI", ID: "oSyiotBD"},
-		{URL: "ws://SAZCfOUSn.qxaU/tj/TIdK", ID: "7la40tTW"},
-		{URL: "file://IyZL.go/YfaSpOpqhN/XfWd", ID: "7HVUuC38"},
-		{URL: "telnet://npLzsEwn.KTR/XLv/gYhEqqdTTCUdpEjE", ID: "_QDwIZ8V"},
-		{URL: "ftps://PlqcUsANz.fn/wpSOrY/NVHIDGTbCVUSL", ID: "JJd8nofa"},
-		{URL: "file://WLCHVIgAk.Nc/gAqCVuw/GBZaquHPx", ID: "SVKhwBjn"},
-		{URL: "bluetooth://qtuD.eT/OugB/XeohyIVkj", ID: "jzLEbSpd"},
-		{URL: "file://hya.jrqF/smmqgM/GJeaDJOYx", ID: "UrqyUbm_"},
-	}
+	store, err := New(tmpFile.Name())
+	require.NoError(t, err, "failed to create storage")
 
-	for i, test := range tests {
-		t.Run(fmt.Sprintf("test_put #%d", i), func(t *testing.T) {
-			err := ifile.Put(context.Background(), test)
-			require.NoError(t, err)
-
-			v, err := ifile.Get(context.Background(), test.ID)
-			require.NoError(t, err)
-			assert.Equal(t, v, test.URL)
-		})
+	return store, func() {
+		store.Close()
+		os.Remove(tmpFile.Name())
 	}
 }
 
-func Test_Get(t *testing.T) {
-	ifile, err := New("db_test.json")
+func TestStorage_PutAndGet(t *testing.T) {
+	store, cleanup := setupTempStorage(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	record := models.URLRecord{ID: "short123", URL: "http://example.com", UserID: "user1"}
+
+	err := store.Put(ctx, record)
+	require.NoError(t, err, "Put failed")
+
+	url, err := store.Get(ctx, "short123")
+	require.NoError(t, err, "Get failed")
+	assert.Equal(t, "http://example.com", url, "URL mismatch")
+}
+
+func TestStorage_PutBatchAndGet(t *testing.T) {
+	store, cleanup := setupTempStorage(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	records := []models.URLRecord{
+		{ID: "short1", URL: "http://one.com", UserID: "user1"},
+		{ID: "short2", URL: "http://two.com", UserID: "user2"},
+	}
+
+	err := store.PutBatch(ctx, records)
+	require.NoError(t, err, "PutBatch failed")
+
+	url1, err := store.Get(ctx, "short1")
+	require.NoError(t, err)
+	assert.Equal(t, "http://one.com", url1)
+
+	url2, err := store.Get(ctx, "short2")
+	require.NoError(t, err)
+	assert.Equal(t, "http://two.com", url2)
+}
+
+func TestStorage_Get_NotFound(t *testing.T) {
+	store, cleanup := setupTempStorage(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	_, err := store.Get(ctx, "nonexistent")
+	assert.ErrorIs(t, err, shared.ErrNotFound, "expected ErrNotFound")
+}
+
+func TestStorage_ListLinksByUserID(t *testing.T) {
+	store, cleanup := setupTempStorage(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	records := []models.URLRecord{
+		{ID: "short1", URL: "http://one.com", UserID: "user1"},
+		{ID: "short2", URL: "http://two.com", UserID: "user1"},
+		{ID: "short3", URL: "http://three.com", UserID: "user2"},
+	}
+
+	err := store.PutBatch(ctx, records)
 	require.NoError(t, err)
 
-	tests := []struct {
-		URL string
-		ID  string
-	}{
-		{"mailto://EBlI.LUcE/nGW/CnKgralWM", "EVvMeswX"},
-		{"data://bNZlqPkX.zPr/AOYjayx/RXDZywCjbH", "zrWsrYVK"},
-		{"ftps://QhPSk.SERo/ASOuRTdh/XuXCUVcR", "WrBTersI"},
-		{"http://hwr.DqhY/qRpylA/BrBUqXwraQX", "IZBF3Drj"},
-		{"file://rSX.gQs/AoJCRUFJbS/HbkVkdDhHkSakU", "B-_ig72W"},
-		{"file://c.Hh/Oo/cAWXXgykO", "ih4UOFRN"},
-		{"http://rfcv.yZ/djwBnRy/GRvWfxKARJXqiIS", "CnhlRf81"},
-		{"sftp://zvJXD.xR/lUTNLwCMuL/ACaRzHI", "oSyiotBD"},
-		{"ws://SAZCfOUSn.qxaU/tj/TIdK", "7la40tTW"},
-		{"file://IyZL.go/YfaSpOpqhN/XfWd", "7HVUuC38"},
-		{"telnet://npLzsEwn.KTR/XLv/gYhEqqdTTCUdpEjE", "_QDwIZ8V"},
-		{"ftps://PlqcUsANz.fn/wpSOrY/NVHIDGTbCVUSL", "JJd8nofa"},
-		{"file://WLCHVIgAk.Nc/gAqCVuw/GBZaquHPx", "SVKhwBjn"},
-		{"bluetooth://qtuD.eT/OugB/XeohyIVkj", "jzLEbSpd"},
-		{"file://hya.jrqF/smmqgM/GJeaDJOYx", "UrqyUbm_"},
+	links, err := store.ListLinksByUserID(ctx, "user1", "http://short.ly")
+	require.NoError(t, err)
+	assert.Len(t, links, 2)
+
+	expectedIDs := []string{"http://short.ly/short1", "http://short.ly/short2"}
+	assert.Equal(t, expectedIDs[0], links[0].ID)
+	assert.Equal(t, expectedIDs[1], links[1].ID)
+}
+
+func TestStorage_DeleteUserURLs(t *testing.T) {
+	store, cleanup := setupTempStorage(t)
+	defer cleanup()
+
+	ctx := context.Background()
+	records := []models.URLRecord{
+		{ID: "short1", URL: "http://one.com", UserID: "user1"},
+		{ID: "short2", URL: "http://two.com", UserID: "user1"},
 	}
 
-	for i, test := range tests {
-		t.Run(fmt.Sprintf("test_put #%d", i), func(t *testing.T) {
-			u, err := ifile.Get(context.Background(), test.ID)
-			require.NoError(t, err)
-			assert.Equal(t, u, test.URL)
-		})
-	}
+	err := store.PutBatch(ctx, records)
+	require.NoError(t, err)
+
+	err = store.DeleteUserURLs(ctx, []string{"short1"}, "user1")
+	require.NoError(t, err)
+
+	str, err := store.Get(ctx, "short1")
+	fmt.Println("str", str)
+	assert.Error(t, err, "Expected error for deleted URL")
+}
+
+func TestStorage_Ping(t *testing.T) {
+	store, cleanup := setupTempStorage(t)
+	defer cleanup()
+
+	err := store.Ping()
+	assert.NoError(t, err, "Ping should always return nil")
 }
