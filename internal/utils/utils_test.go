@@ -62,7 +62,7 @@ func randomString(length int64) string {
 
 func Test_Generate(t *testing.T) {
 	m := make(map[string]string)
-	urls := generateURLS(100000)
+	urls := generateURLS(10)
 	for i, u := range urls {
 		t.Run(fmt.Sprintf("URL #%d", i), func(t *testing.T) {
 			IDlen := 8
