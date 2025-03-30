@@ -19,17 +19,18 @@ import (
 const (
 	localContainerName = "test_postgres_container"
 	localConnString    = "postgres://testuser:testpass@localhost:54321/testdb?sslmode=disable"
-	ciConnString       = "postgres://testuser:testpass@localhost:5432/testdb?sslmode=disable"
+	ciConnString       = "postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable"
 )
 
 var (
 	logger, _ = logging.New(zapcore.DebugLevel)
 	connStr   string
+	isCI      = os.Getenv("CI") == "true"
 )
 
 // startTestDB запускает БД в Docker, если тесты выполняются локально
 func startTestDB() {
-	if os.Getenv("CI") == "true" {
+	if isCI {
 		connStr = ciConnString
 		logger.Info("🔄 Тесты запущены в CI. Используем встроенный PostgreSQL...")
 		return
@@ -56,7 +57,7 @@ func startTestDB() {
 
 // stopTestDB останавливает контейнер после тестов (если они не в CI)
 func stopTestDB() {
-	if os.Getenv("CI") == "true" {
+	if isCI {
 		return
 	}
 
@@ -98,9 +99,16 @@ func setupTestStorage(t *testing.T) *Storage {
 
 // TestMain управляет жизненным циклом тестов
 func TestMain(m *testing.M) {
-	startTestDB()
+	if !isCI {
+		startTestDB()
+	}
+
 	exitCode := m.Run()
-	stopTestDB()
+
+	if !isCI {
+		stopTestDB()
+	}
+
 	os.Exit(exitCode)
 }
 
