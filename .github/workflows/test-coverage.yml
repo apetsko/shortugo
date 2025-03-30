@@ -14,14 +14,31 @@ jobs:
   golangci:
     name: lint
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: praktikum
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v4
 
-      - name: generate test coverage
+      - name: Set up PostgreSQL connection string
+        run: echo "DATABASE_URL=postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable" >> $GITHUB_ENV
+
+      - name: Generate test coverage
         run: go test ./... -coverprofile=./cover.out
 
-      - name: check test coverage
+      - name: Check test coverage
         uses: vladopajic/go-test-coverage@v2
         with:
           profile: cover.out
