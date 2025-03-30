@@ -44,6 +44,7 @@ func TestAuth_CookieSetUserID(t *testing.T) {
 				assert.Len(t, userID, 16)
 
 				resp := w.Result()
+				defer resp.Body.Close()
 				cookie := resp.Cookies()
 				require.Len(t, cookie, 1)
 				assert.Equal(t, "shortugo", cookie[0].Name)
@@ -92,6 +93,7 @@ func TestAuth_CookieGetUserID(t *testing.T) {
 				require.NoError(t, err)
 
 				resp := w.Result()
+				defer resp.Body.Close()
 				cookies := resp.Cookies()
 				require.Len(t, cookies, 1)
 

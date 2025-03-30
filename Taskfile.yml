@@ -17,11 +17,15 @@ tasks:
   cover:
     desc: Check test coverage
     cmds:
-
       - go test ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
       - go-test-coverage --config=./.testcoverage.yml
       - go tool cover -html=cover.out -o coverage.html
+    silent: true
 
+  statictest:
+    desc: yp statictest
+    cmds:
+      - go vet -vettool=./statictest ./...
     silent: true
 
   build:

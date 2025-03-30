@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"github.com/apetsko/shortugo/internal/storages/shared"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -38,6 +40,7 @@ func BenchmarkListUserURLs(b *testing.B) {
 
 	cookie := &http.Cookie{Name: "shortugo", Value: "user-id"}
 
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		req := httptest.NewRequest("GET", "/user/urls", nil)
 		req.AddCookie(cookie)
@@ -45,14 +48,14 @@ func BenchmarkListUserURLs(b *testing.B) {
 
 		h.ListUserURLs(w, req)
 
-		if w.Result().StatusCode != http.StatusOK {
-			b.Errorf("unexpected status code: got %v, want %v", w.Result().StatusCode, http.StatusOK)
-		}
+		resp := w.Result()
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		require.NoError(b, err)
+		require.Equal(b, http.StatusOK, resp.StatusCode, "unexpected status code")
 
 		expectedBody := `[{"short_url":"abc123","original_url":"https://example.com/page1"},{"short_url":"xyz789","original_url":"https://example.com/page2"},{"short_url":"def456","original_url":"https://example.com/page3"}]`
-		if w.Body.String() != expectedBody {
-			b.Errorf("unexpected body: got %v, want %v", w.Body.String(), expectedBody)
-		}
+		require.JSONEq(b, expectedBody, string(body), "unexpected body")
 	}
 }
 

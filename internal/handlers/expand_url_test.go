@@ -34,6 +34,7 @@ func BenchmarkExpandURL(b *testing.B) {
 		h.ExpandURL(w, req)
 
 		resp := w.Result()
+		defer resp.Body.Close()
 
 		assert.Equal(b, http.StatusTemporaryRedirect, resp.StatusCode, "unexpected status code")
 		assert.Equal(b, mockURL, resp.Header.Get("Location"), "unexpected Location header")

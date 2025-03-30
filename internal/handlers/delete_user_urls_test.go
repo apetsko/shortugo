@@ -39,6 +39,7 @@ func BenchmarkDeleteUserURLs(b *testing.B) {
 		h.DeleteUserURLs(w, req)
 
 		resp := w.Result()
+		defer resp.Body.Close()
 
 		assert.Equal(b, http.StatusAccepted, resp.StatusCode, "unexpected status code")
 
