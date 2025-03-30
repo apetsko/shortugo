@@ -37,6 +37,9 @@ func startTestDB() {
 	}
 
 	connStr = localConnString
+
+	logger.Info("Используем строку подключения:", connStr)
+
 	logger.Info("🔄 Запускаем тестовую базу данных в Docker...")
 
 	cmd := exec.Command("docker", "run", "--rm", "-d",
