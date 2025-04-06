@@ -8,11 +8,13 @@ import (
 	"github.com/apetsko/shortugo/internal/storages/shared"
 )
 
+// Storage represents an in-memory storage for URL records.
 type Storage struct {
-	byID     map[string]models.URLRecord
-	byUserID map[string][]models.URLRecord
+	byID     map[string]models.URLRecord   // Map of URL records by their ID.
+	byUserID map[string][]models.URLRecord // Map of URL records by user ID.
 }
 
+// New creates a new instance of in-memory storage.
 func New() *Storage {
 	return &Storage{
 		byID:     make(map[string]models.URLRecord),
@@ -20,6 +22,7 @@ func New() *Storage {
 	}
 }
 
+// Put stores a URL record in the in-memory storage.
 func (im *Storage) Put(ctx context.Context, r models.URLRecord) (err error) {
 	select {
 	case <-ctx.Done():
@@ -31,6 +34,7 @@ func (im *Storage) Put(ctx context.Context, r models.URLRecord) (err error) {
 	return nil
 }
 
+// PutBatch stores multiple URL records in the in-memory storage.
 func (im *Storage) PutBatch(ctx context.Context, rr []models.URLRecord) (err error) {
 	for _, r := range rr {
 		select {
@@ -44,6 +48,7 @@ func (im *Storage) PutBatch(ctx context.Context, rr []models.URLRecord) (err err
 	return nil
 }
 
+// Get retrieves the original URL for a given short URL.
 func (im *Storage) Get(ctx context.Context, shortURL string) (url string, err error) {
 	select {
 	case <-ctx.Done():
@@ -59,6 +64,7 @@ func (im *Storage) Get(ctx context.Context, shortURL string) (url string, err er
 	return "", fmt.Errorf("URL not found: %s. %w", shortURL, shared.ErrNotFound)
 }
 
+// ListLinksByUserID lists all URLs associated with a user ID.
 func (im *Storage) ListLinksByUserID(ctx context.Context, baseURL, userID string) (rr []models.URLRecord, err error) {
 	select {
 	case <-ctx.Done():
@@ -67,7 +73,7 @@ func (im *Storage) ListLinksByUserID(ctx context.Context, baseURL, userID string
 		if recs, ok := im.byUserID[userID]; ok {
 			for i := range recs {
 				if !recs[i].Deleted {
-					recs[i].ID = fmt.Sprintf("%s/%s", baseURL, recs[i].ID)
+					recs[i].ID = baseURL + "/" + recs[i].ID
 				}
 			}
 			return recs, nil
@@ -76,6 +82,7 @@ func (im *Storage) ListLinksByUserID(ctx context.Context, baseURL, userID string
 	return nil, fmt.Errorf("URLs not found for UserID: %s. %w", userID, shared.ErrNotFound)
 }
 
+// DeleteUserURLs deletes multiple URLs associated with a user ID.
 func (im *Storage) DeleteUserURLs(ctx context.Context, ids []string, userID string) (err error) {
 	select {
 	case <-ctx.Done():
@@ -93,10 +100,12 @@ func (im *Storage) DeleteUserURLs(ctx context.Context, ids []string, userID stri
 	}
 }
 
+// Ping checks the storage health.
 func (im *Storage) Ping() error {
 	return nil
 }
 
+// Close closes the in-memory storage.
 func (im *Storage) Close() error {
 	return nil
 }

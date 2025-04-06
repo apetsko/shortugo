@@ -10,18 +10,18 @@ import (
 func TestParse(t *testing.T) {
 	tests := []struct {
 		name    string
-		wantC   Config
+		wantC   *Config
 		wantErr bool
 	}{
 		{
 			name:    "OK",
-			wantC:   Config{Host: "localhost:8080", BaseURL: "http://localhost:8080", FileStoragePath: "db.json", Secret: "fortytwo"},
+			wantC:   &Config{Host: "localhost:8080", BaseURL: "http://localhost:8080", FileStoragePath: "db.json", Secret: "fortytwo"},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotC, err := Parse()
+			gotC, err := New()
 			require.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, tt.wantC, gotC)
 		})
