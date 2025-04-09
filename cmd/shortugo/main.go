@@ -2,24 +2,26 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/apetsko/shortugo/internal/config"
 	"github.com/apetsko/shortugo/internal/handlers"
 	"github.com/apetsko/shortugo/internal/storages"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/apetsko/shortugo/internal/logging"
 	"github.com/apetsko/shortugo/internal/server"
 )
 
 func main() {
-	logger, err := logging.NewZapLogger()
+	logger, err := logging.New(zapcore.DebugLevel)
 	if err != nil {
 		log.Fatal("Failed to initialize logger:", err)
 	}
 
-	cfg, err := config.Parse()
+	logger.Infof("Starting server with LogLevel: %s", zapcore.DebugLevel)
+
+	cfg, err := config.New()
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
@@ -33,7 +35,7 @@ func main() {
 	defer func(storage handlers.Storage) {
 		err := storage.Close()
 		if err != nil {
-			logger.Fatal(fmt.Sprintf("failed to close storage: %s", err.Error()))
+			logger.Fatal("failed to close storage: " + err.Error())
 		}
 	}(storage)
 
@@ -41,7 +43,7 @@ func main() {
 
 	go storages.StartBatchDeleteProcessor(context.Background(), storage, handler.ToDelete, logger)
 
-	router := handlers.SetupRouter(handler)
+	router := server.Router(handler)
 	s := server.New(cfg.Host, router)
 
 	logger.Info("running server on " + cfg.Host)

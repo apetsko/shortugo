@@ -19,10 +19,12 @@ import (
 //go:embed migrations/*.sql
 var migrations embed.FS
 
+// Storage represents a PostgreSQL-backed storage.
 type Storage struct {
 	pool *pgxpool.Pool
 }
 
+// applyMigrations applies database migrations using goose.
 func applyMigrations(conn string) error {
 	goose.SetBaseFS(migrations)
 	db, err := sql.Open("pgx", conn)
@@ -39,6 +41,7 @@ func applyMigrations(conn string) error {
 	return nil
 }
 
+// New creates a new Storage instance and applies migrations.
 func New(conn string) (*Storage, error) {
 	if err := applyMigrations(conn); err != nil {
 		return nil, err
@@ -53,17 +56,19 @@ func New(conn string) (*Storage, error) {
 	return &Storage{pool: pool}, nil
 }
 
+// Close closes the database connection pool.
 func (p *Storage) Close() error {
 	p.pool.Close()
 	return nil
 }
 
+// Put stores a URLRecord in the database.
 func (p *Storage) Put(ctx context.Context, r models.URLRecord) error {
 	const insert = `
-	INSERT INTO urls (id, url,user_id, date )
-	VALUES ($1, $2, $3, $4)
-	ON CONFLICT (id)
-	DO UPDATE SET date = EXCLUDED.date;`
+			INSERT INTO urls (id, url, user_id, date)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (id)
+			DO UPDATE SET date = EXCLUDED.date;`
 
 	_, err := p.pool.Exec(ctx, insert, r.ID, r.URL, r.UserID, time.Now().Format(time.RFC3339))
 	if err != nil {
@@ -73,12 +78,13 @@ func (p *Storage) Put(ctx context.Context, r models.URLRecord) error {
 	return nil
 }
 
+// PutBatch stores multiple URLRecords in the database.
 func (p *Storage) PutBatch(ctx context.Context, rr []models.URLRecord) error {
 	const insertBatch = `
-	INSERT INTO urls (id, url, user_id, date)
-	VALUES ($1, $2, $3, $4)
-	ON CONFLICT (id)
-	DO UPDATE SET date = EXCLUDED.date;`
+			INSERT INTO urls (id, url, user_id, date)
+			VALUES ($1, $2, $3, $4)
+			ON CONFLICT (id)
+			DO UPDATE SET date = EXCLUDED.date;`
 
 	batch := new(pgx.Batch)
 	for _, r := range rr {
@@ -94,6 +100,7 @@ func (p *Storage) PutBatch(ctx context.Context, rr []models.URLRecord) error {
 	return nil
 }
 
+// Get retrieves the original URL for a given short URL.
 func (p *Storage) Get(ctx context.Context, id string) (url string, err error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
@@ -121,12 +128,13 @@ func (p *Storage) Get(ctx context.Context, id string) (url string, err error) {
 	return url, nil
 }
 
-func (p *Storage) ListLinksByUserID(ctx context.Context, userID, baseURL string) (rr []models.URLRecord, err error) {
+// ListLinksByUserID lists all URLs associated with a user ID.
+func (p *Storage) ListLinksByUserID(ctx context.Context, baseURL, userID string) (rr []models.URLRecord, err error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
 
-	const query = "SELECT id, url, user_id  FROM urls WHERE user_id = $1 AND deleted = FALSE"
+	const query = "SELECT id, url, user_id FROM urls WHERE user_id = $1 AND deleted = FALSE"
 
 	rows, err := p.pool.Query(ctx, query, userID)
 	if err != nil {
@@ -139,7 +147,7 @@ func (p *Storage) ListLinksByUserID(ctx context.Context, userID, baseURL string)
 		if err := rows.Scan(&record.ID, &record.URL, &record.UserID); err != nil {
 			return nil, fmt.Errorf("failed to scan row: %w", err)
 		}
-		record.ID = fmt.Sprintf("%s/%s", baseURL, record.ID)
+		record.ID = baseURL + "/" + record.ID
 		rr = append(rr, record)
 	}
 
@@ -158,14 +166,14 @@ func (p *Storage) ListLinksByUserID(ctx context.Context, userID, baseURL string)
 	return rr, nil
 }
 
+// DeleteUserURLs deletes multiple URLs associated with a user ID.
 func (p *Storage) DeleteUserURLs(ctx context.Context, ids []string, userID string) error {
 	const setDeleteBatch = `
-		UPDATE urls
-		SET deleted = true
-		WHERE id = ANY($1::text[]) AND user_id = $2 AND deleted = FALSE;`
+				UPDATE urls
+				SET deleted = true
+				WHERE id = ANY($1::text[]) AND user_id = $2 AND deleted = FALSE;`
 
 	batch := new(pgx.Batch)
-
 	batch.Queue(setDeleteBatch, ids, userID)
 
 	br := p.pool.SendBatch(ctx, batch)
@@ -178,6 +186,7 @@ func (p *Storage) DeleteUserURLs(ctx context.Context, ids []string, userID strin
 	return nil
 }
 
+// Ping checks the database connection health.
 func (p *Storage) Ping() error {
 	return p.pool.Ping(context.Background())
 }
