@@ -80,8 +80,8 @@ func TestGenerateID(t *testing.T) {
 	testCases := []struct {
 		name     string
 		input    string
-		length   int
 		expected string
+		length   int
 	}{
 		{
 			name:     "Generate 8-char ID",
@@ -149,8 +149,8 @@ func TestValidateStruct(t *testing.T) {
 	testCases := []struct {
 		name      string
 		input     TestStruct
-		expectErr bool
 		errFields []string
+		expectErr bool
 	}{
 		{
 			name:      "Invalid: empty Name",

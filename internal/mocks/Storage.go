@@ -379,7 +379,7 @@ func NewStorage(t interface {
 	Cleanup(func())
 }) *Storage {
 	mock := &Storage{}
-	mock.Mock.Test(t)
+	mock.Test(t)
 
 	t.Cleanup(func() { mock.AssertExpectations(t) })
 

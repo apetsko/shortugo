@@ -10,13 +10,13 @@ func TestLogger_Methods(t *testing.T) {
 	logger, _ := New(zapcore.DebugLevel)
 
 	testCases := []struct {
-		name    string
 		logFunc func()
+		name    string
 	}{
-		{"Debug", func() { logger.Debug("debug message", "key", "value") }},
-		{"Info", func() { logger.Info("info message", "key", "value") }},
-		{"Error", func() { logger.Error("error message", "key", "value") }},
-		{"Printf", func() { logger.Printf("formatted %s", "message") }},
+		{name: "Debug", logFunc: func() { logger.Debug("debug message", "key", "value") }},
+		{name: "Info", logFunc: func() { logger.Info("info message", "key", "value") }},
+		{name: "Error", logFunc: func() { logger.Error("error message", "key", "value") }},
+		{name: "Printf", logFunc: func() { logger.Printf("formatted %s", "message") }},
 	}
 
 	for _, tc := range testCases {

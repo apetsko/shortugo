@@ -1,3 +1,5 @@
+// Package utils provides utility functions and helpers used across the application.
+// It includes functions for generating IDs, validating structs, and other reusable utilities.
 package utils
 
 import (

@@ -1,3 +1,5 @@
+// Package models defines the data structures used throughout the application.
+// It includes models for URL records, batch operations, and user-specific URL data.
 package models
 
 // URLRecord represents a record of a shortened URL.
@@ -15,8 +17,8 @@ type Result struct {
 
 // BatchDeleteRequest represents a request to delete multiple URLs.
 type BatchDeleteRequest struct {
-	Ids    []string // List of URL IDs to be deleted.
 	UserID string   // ID of the user requesting the deletion.
+	Ids    []string // List of URL IDs to be deleted.
 }
 
 // BatchRequest represents a request to shorten multiple URLs.

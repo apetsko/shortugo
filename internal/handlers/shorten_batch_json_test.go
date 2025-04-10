@@ -52,7 +52,7 @@ func BenchmarkShortenBatchJSON(b *testing.B) {
 
 		body, err := io.ReadAll(resp.Body)
 		assert.NoError(b, err, "Reading response body should not return an error")
-		resp.Body.Close()
+		require.NoError(b, resp.Body.Close())
 
 		var resps []models.BatchResponse
 		err = json.Unmarshal(body, &resps)
@@ -68,12 +68,12 @@ func BenchmarkShortenBatchJSON(b *testing.B) {
 
 func TestShortenBatchJSON(t *testing.T) {
 	tests := []struct {
-		name             string
 		mockAuthSetup    func(mockAuth *mocks.Authenticator)
 		mockStorageSetup func(mockStorage *mocks.Storage)
+		name             string
 		requestBody      string
-		expectedStatus   int
 		expectedBody     string
+		expectedStatus   int
 	}{
 		{
 			name: "successful batch shortening",

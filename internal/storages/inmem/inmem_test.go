@@ -151,9 +151,9 @@ func TestStorage_PutAndGet(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		record  models.URLRecord
 		wantURL string
 		wantErr error
+		record  models.URLRecord
 	}{
 		{
 			name: "Valid record",
@@ -215,10 +215,10 @@ func TestStorage_DeleteUserURLs(t *testing.T) {
 	}
 
 	testCases := []struct {
-		name    string
-		ids     []string
-		userID  string
 		wantErr error
+		name    string
+		userID  string
+		ids     []string
 	}{
 		{
 			name:   "Delete existing URL",
@@ -272,15 +272,15 @@ func TestStorage_ListLinksByUserID(t *testing.T) {
 	}
 
 	testCases := []struct {
+		wantErr error
 		name    string
 		userID  string
 		baseURL string
 		wantLen int
-		wantErr error
 	}{
-		{"List for user1", "user1", "https://short.ly", 2, nil},
-		{"List for user2", "user2", "https://short.ly", 1, nil},
-		{"List for non-existent user", "user3", "https://short.ly", 0, shared.ErrNotFound},
+		{nil, "List for user1", "user1", "https://short.ly", 2},
+		{nil, "List for user2", "user2", "https://short.ly", 1},
+		{shared.ErrNotFound, "List for non-existent user", "user3", "https://short.ly", 0},
 	}
 
 	for _, tc := range testCases {
@@ -302,9 +302,9 @@ func TestStorage_PutBatch(t *testing.T) {
 	ctx := context.Background()
 
 	testCases := []struct {
+		wantErr error
 		name    string
 		records []models.URLRecord
-		wantErr error
 	}{
 		{
 			name: "Insert batch of records",
@@ -339,11 +339,11 @@ func TestStorage_PingAndClose(t *testing.T) {
 	store := New()
 
 	testCases := []struct {
-		name string
 		fn   func() error
+		name string
 	}{
-		{"Ping", store.Ping},
-		{"Close", store.Close},
+		{name: "Close", fn: store.Close},
+		{name: "Ping", fn: store.Ping},
 	}
 
 	for _, tc := range testCases {
