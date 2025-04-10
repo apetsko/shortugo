@@ -86,7 +86,11 @@ func ExampleURLHandler_ListUserURLs() {
 
 		handler.ShortenJSON(rr, req)
 		bb := rr.Result()
-		defer bb.Body.Close()
+		defer func() {
+			if err := bb.Body.Close(); err != nil {
+				logger.Error("Failed to close request body", "error", err.Error())
+			}
+		}()
 
 		for _, c := range bb.Cookies() {
 			if c.Name == "shortugo" {

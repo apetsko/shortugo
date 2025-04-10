@@ -1,3 +1,5 @@
+// Package postgres provides a PostgreSQL-backed storage implementation for the application.
+// It includes methods for storing, retrieving, and managing URL records in a PostgreSQL database.
 package postgres
 
 import (
@@ -8,6 +10,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/apetsko/shortugo/internal/logging"
 	"github.com/apetsko/shortugo/internal/models"
 	"github.com/apetsko/shortugo/internal/storages/shared"
 	"github.com/jackc/pgx/v5"
@@ -25,13 +28,17 @@ type Storage struct {
 }
 
 // applyMigrations applies database migrations using goose.
-func applyMigrations(conn string) error {
+func applyMigrations(conn string, logger *logging.Logger) error {
 	goose.SetBaseFS(migrations)
 	db, err := sql.Open("pgx", conn)
 	if err != nil {
 		return fmt.Errorf("goose: failed to open DB: %w", err)
 	}
-	defer db.Close()
+	defer func() {
+		if err = db.Close(); err != nil {
+			logger.Error(err.Error())
+		}
+	}()
 
 	err = goose.Up(db, "migrations")
 	if err != nil {
@@ -42,8 +49,8 @@ func applyMigrations(conn string) error {
 }
 
 // New creates a new Storage instance and applies migrations.
-func New(conn string) (*Storage, error) {
-	if err := applyMigrations(conn); err != nil {
+func New(conn string, logger *logging.Logger) (*Storage, error) {
+	if err := applyMigrations(conn, logger); err != nil {
 		return nil, err
 	}
 
@@ -91,7 +98,9 @@ func (p *Storage) PutBatch(ctx context.Context, rr []models.URLRecord) error {
 		batch.Queue(insertBatch, r.ID, r.URL, r.UserID, time.Now().Format(time.RFC3339))
 	}
 	br := p.pool.SendBatch(ctx, batch)
-	defer br.Close()
+	defer func() {
+		_ = br.Close()
+	}()
 
 	if _, err := br.Exec(); err != nil {
 		return fmt.Errorf("failed to batch insert: %w", err)
@@ -101,7 +110,7 @@ func (p *Storage) PutBatch(ctx context.Context, rr []models.URLRecord) error {
 }
 
 // Get retrieves the original URL for a given short URL.
-func (p *Storage) Get(ctx context.Context, id string) (url string, err error) {
+func (p *Storage) Get(ctx context.Context, id string) (string, error) {
 	if err := ctx.Err(); err != nil {
 		return "", err
 	}
@@ -109,7 +118,8 @@ func (p *Storage) Get(ctx context.Context, id string) (url string, err error) {
 	deleted := false
 	const query = "SELECT url, deleted FROM urls WHERE id = $1"
 
-	err = p.pool.QueryRow(ctx, query, id).Scan(&url, &deleted)
+	var url string
+	err := p.pool.QueryRow(ctx, query, id).Scan(&url, &deleted)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return "", fmt.Errorf("URL not found: %s. %w", id, shared.ErrNotFound)
@@ -129,7 +139,7 @@ func (p *Storage) Get(ctx context.Context, id string) (url string, err error) {
 }
 
 // ListLinksByUserID lists all URLs associated with a user ID.
-func (p *Storage) ListLinksByUserID(ctx context.Context, baseURL, userID string) (rr []models.URLRecord, err error) {
+func (p *Storage) ListLinksByUserID(ctx context.Context, baseURL, userID string) ([]models.URLRecord, error) {
 	if err := ctx.Err(); err != nil {
 		return nil, err
 	}
@@ -142,6 +152,7 @@ func (p *Storage) ListLinksByUserID(ctx context.Context, baseURL, userID string)
 	}
 	defer rows.Close()
 
+	rr := make([]models.URLRecord, 0)
 	for rows.Next() {
 		var record models.URLRecord
 		if err := rows.Scan(&record.ID, &record.URL, &record.UserID); err != nil {
@@ -177,7 +188,9 @@ func (p *Storage) DeleteUserURLs(ctx context.Context, ids []string, userID strin
 	batch.Queue(setDeleteBatch, ids, userID)
 
 	br := p.pool.SendBatch(ctx, batch)
-	defer br.Close()
+	defer func() {
+		_ = br.Close()
+	}()
 	_, err := br.Exec()
 	if err != nil {
 		return fmt.Errorf("failed to batch delete user urls: %w", err)

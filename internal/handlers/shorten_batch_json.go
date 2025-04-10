@@ -37,7 +37,7 @@ func (h *URLHandler) ShortenBatchJSON(w http.ResponseWriter, r *http.Request) {
 
 	// Ensure the request body is closed after reading
 	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+		err = Body.Close()
 		if err != nil {
 			h.Logger.Error("error closing body", "error", err.Error())
 		}

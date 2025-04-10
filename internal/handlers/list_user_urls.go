@@ -54,7 +54,7 @@ func (h *URLHandler) ListUserURLs(w http.ResponseWriter, r *http.Request) {
 	// Marshal the list of user URLs into JSON
 	var buf bytes.Buffer
 	encoder := json.NewEncoder(&buf)
-	if err := encoder.Encode(userURLs); err != nil {
+	if err = encoder.Encode(userURLs); err != nil {
 		h.Logger.Error("Error marshaling user URLs:", err)
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return

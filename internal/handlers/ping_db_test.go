@@ -14,8 +14,8 @@ import (
 
 func TestPingDB(t *testing.T) {
 	tests := []struct {
-		name           string
 		mockSetup      func(mockStorage *mocks.Storage)
+		name           string
 		expectedStatus int
 	}{
 		{

@@ -1,3 +1,5 @@
+// Package storages provides the initialization and management of different storage implementations.
+// It includes logic for selecting the appropriate storage type and handling batch operations.
 package storages
 
 import (
@@ -25,7 +27,7 @@ func Init(databaseDSN, fileStoragePath string, logger *logging.Logger) (handlers
 	switch {
 	case databaseDSN != "":
 		// Initialize PostgreSQL storage if databaseDSN is provided.
-		s, err := postgres.New(databaseDSN)
+		s, err := postgres.New(databaseDSN, logger)
 		if err != nil {
 			return nil, err
 		}

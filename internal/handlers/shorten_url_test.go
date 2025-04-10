@@ -49,7 +49,7 @@ func BenchmarkShortenURL(b *testing.B) {
 
 		body, err := io.ReadAll(resp.Body)
 		assert.NoError(b, err, "Reading response body should not return an error")
-		resp.Body.Close()
+		require.NoError(b, resp.Body.Close())
 
 		shortenURL := string(body)
 		assert.Contains(b, shortenURL, h.BaseURL, "Shorten URL should contain the base URL")
@@ -91,10 +91,9 @@ func TestURLHandler_ShortenURL(t *testing.T) {
 			res := w.Result()
 			assert.Equal(t, test.want.code, res.StatusCode)
 
-			defer res.Body.Close()
-
 			resBody, err := io.ReadAll(res.Body)
 			require.NoError(t, err)
+			require.NoError(t, res.Body.Close())
 
 			assert.Equal(t, test.want.ID, string(resBody))
 		})
@@ -108,12 +107,12 @@ func TestShortenURL(t *testing.T) {
 	shortenURL := baseURL + "/" + shortenID
 
 	tests := []struct {
-		name             string
 		mockAuthSetup    func(mockAuth *mocks.Authenticator)
 		mockStorageSetup func(mockStorage *mocks.Storage)
+		name             string
 		requestBody      string
-		expectedStatus   int
 		expectedBody     string
+		expectedStatus   int
 	}{
 		{
 			name: "successful URL shortening",

@@ -39,7 +39,11 @@ func BenchmarkDeleteUserURLs(b *testing.B) {
 		h.DeleteUserURLs(w, req)
 
 		resp := w.Result()
-		defer resp.Body.Close()
+		defer func() {
+			if err2 := resp.Body.Close(); err2 != nil {
+				h.Logger.Error("Failed to close request body", "error", err2.Error())
+			}
+		}()
 
 		assert.Equal(b, http.StatusAccepted, resp.StatusCode, "unexpected status code")
 
@@ -61,11 +65,11 @@ func TestDeleteUserURLs(t *testing.T) {
 	}
 
 	tests := []struct {
-		name           string
+		validate       func(*httptest.ResponseRecorder)
 		setup          func()
 		reqBody        io.Reader
+		name           string
 		expectedStatus int
-		validate       func(*httptest.ResponseRecorder)
 	}{
 		{
 			name: "unauthorized user",

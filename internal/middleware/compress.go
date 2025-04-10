@@ -1,3 +1,5 @@
+// Package middleware provides HTTP middleware for the application.
+// It includes functionality for request and response compression, logging, and other middleware utilities.
 package middleware
 
 import (
@@ -81,7 +83,12 @@ func GzipMiddleware(logger *logging.Logger) func(http.Handler) http.Handler {
 					http.Error(w, "Failed to decompress request body", http.StatusInternalServerError)
 					return
 				}
-				defer cr.Close()
+				defer func() {
+					if err := cr.Close(); err != nil {
+						logger.Error("Failed to close gzip reader: " + err.Error())
+					}
+				}()
+
 				r.Body = cr
 			}
 
@@ -108,7 +115,11 @@ func GzipMiddleware(logger *logging.Logger) func(http.Handler) http.Handler {
 				bufferedWriter.ResponseWriter.WriteHeader(bufferedWriter.statusCode)
 
 				gz := gzip.NewWriter(bufferedWriter.ResponseWriter)
-				defer gz.Close()
+				defer func() {
+					if err := gz.Close(); err != nil {
+						logger.Error("Failed to close gzip writer: " + err.Error())
+					}
+				}()
 
 				if _, err := gz.Write(bufferedWriter.buffer.Bytes()); err != nil {
 					logger.Error("Failed to compress response: " + err.Error())

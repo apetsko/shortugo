@@ -49,7 +49,7 @@ func BenchmarkListUserURLs(b *testing.B) {
 		h.ListUserURLs(w, req)
 
 		resp := w.Result()
-		defer resp.Body.Close()
+		defer require.NoError(b, resp.Body.Close())
 		body, err := io.ReadAll(resp.Body)
 		require.NoError(b, err)
 		require.Equal(b, http.StatusOK, resp.StatusCode, "unexpected status code")
@@ -63,11 +63,11 @@ func TestListUserURLs(t *testing.T) {
 	logger, _ := logging.New(zapcore.DebugLevel)
 
 	tests := []struct {
-		name             string
 		mockAuthSetup    func(mockAuth *mocks.Authenticator)
 		mockStorageSetup func(mockStorage *mocks.Storage)
-		expectedStatus   int
+		name             string
 		expectedBody     string
+		expectedStatus   int
 	}{
 		{
 			name: "successful retrieval",

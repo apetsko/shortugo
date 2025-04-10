@@ -14,12 +14,17 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-func decompressGzip(data []byte) (string, error) {
+func decompressGzip(data []byte, logger *logging.Logger) (string, error) {
 	reader, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return "", err
 	}
-	defer reader.Close()
+
+	defer func() {
+		if err = reader.Close(); err != nil {
+			logger.Error(err.Error())
+		}
+	}()
 
 	decompressed, err := io.ReadAll(reader)
 	if err != nil {
@@ -33,8 +38,8 @@ func TestGzipMiddleware(t *testing.T) {
 		name         string
 		contentType  string
 		body         string
-		expectGzip   bool
 		expectedBody string
+		expectGzip   bool
 	}{
 		{
 			name:         "JSON response",
@@ -78,14 +83,18 @@ func TestGzipMiddleware(t *testing.T) {
 			middleware(handler).ServeHTTP(rr, req)
 
 			res := rr.Result()
-			defer res.Body.Close()
+			defer func() {
+				if err := res.Body.Close(); err != nil {
+					logger.Error(err.Error())
+				}
+			}()
 
 			if tc.expectGzip {
 				assert.Equal(t, "gzip", res.Header.Get("Content-Encoding"), "Expected gzip encoding in response")
 				compressedBody, err := io.ReadAll(res.Body)
 				require.NoError(t, err, "Error reading response body")
 
-				decompressed, err := decompressGzip(compressedBody)
+				decompressed, err := decompressGzip(compressedBody, logger)
 				require.NoError(t, err, "Failed to decompress response")
 				assert.Equal(t, tc.expectedBody, decompressed)
 			} else {

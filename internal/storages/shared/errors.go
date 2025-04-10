@@ -1,3 +1,5 @@
+// Package shared contains shared utilities and error definitions used across the application.
+// It includes common error types and other reusable components.
 package shared
 
 import "errors"

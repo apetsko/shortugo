@@ -11,6 +11,7 @@ import (
 	"github.com/apetsko/shortugo/internal/storages/shared"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -34,7 +35,7 @@ func BenchmarkExpandURL(b *testing.B) {
 		h.ExpandURL(w, req)
 
 		resp := w.Result()
-		defer resp.Body.Close()
+		defer require.NoError(b, resp.Body.Close())
 
 		assert.Equal(b, http.StatusTemporaryRedirect, resp.StatusCode, "unexpected status code")
 		assert.Equal(b, mockURL, resp.Header.Get("Location"), "unexpected Location header")
@@ -50,12 +51,12 @@ func TestExpandURL(t *testing.T) {
 	}
 
 	tests := []struct {
+		validate       func(*httptest.ResponseRecorder)
+		mockError      error
 		name           string
 		urlID          string
 		mockReturn     string
-		mockError      error
 		expectedStatus int
-		validate       func(*httptest.ResponseRecorder)
 	}{
 		{
 			name:           "successful redirect",
