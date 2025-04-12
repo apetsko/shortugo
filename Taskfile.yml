@@ -1,23 +1,64 @@
 version: "3"
 
 tasks:
+
+
+  build-multichecker:
+    desc: Build the custom static linter
+    cmds:
+      - go build -o staticlint ./cmd/staticlint
+    sources:
+      - ./cmd/staticlint/**/*.go
+    generates:
+      - staticlint
+
+  multichecker:
+    desc: Run static analysis using the custom linter
+    deps:
+      - build-multichecker
+    cmds:
+      - go vet -vettool={{.PWD}}/staticlint ./...
+
+
+
   lint:
     desc: Run linters using golangci-lint
     cmds:
       - golangci-lint run --config .golangci.yml
     silent: true
+
+  lint2:
+    desc: Run linters using golangci-lint
+    cmds:
+      - golangci-lint run --config .golangci2.yml
+    silent: true
+
+  cover:
+    desc: Check test coverage
+    cmds:
+      - go test ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
+      - go-test-coverage --config=./.testcoverage.yml
+      - go tool cover -html=cover.out -o coverage.html
+    silent: true
+
+  statictest:
+    desc: yp statictest
+    cmds:
+      - go vet -vettool=./statictest ./...
+    silent: true
+
   build:
     desc: build project
-    dir: cmd/shortener
+    dir: cmd/shortugo
     cmds:
-      - go build -o shortener
+      - go build -o shortugo
       - echo "Doner"
     silent: true
+
   run:
     desc: run project
-    dir: cmd/shortener
     cmds:
-      - go run main.go -f="db.json" #-d="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
+      - wgo run cmd/shortugo/main.go -f="db.json" -d="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
     silent: true
 
   test:
@@ -25,18 +66,29 @@ tasks:
     deps:
       - build
     cmds:
-      - ./shortenertest -test.v -test.run=^TestIteration1$ -binary-path=cmd/shortener/shortener
+      - ./shortenertest -test.v -test.run=^TestIteration1$ -binary-path=cmd/shortugo/shortugo
       - ./shortenertest -test.v -test.run=^TestIteration2$ -source-path="."
       - ./shortenertest -test.v -test.run=^TestIteration3$ -source-path="."
-      - ./shortenertest -test.v -test.run=^TestIteration4$ -binary-path=cmd/shortener/shortener -server-port=8080
-      - ./shortenertest -test.v -test.run=^TestIteration5$ -binary-path=cmd/shortener/shortener -server-port=8080
+      - ./shortenertest -test.v -test.run=^TestIteration4$ -binary-path=cmd/shortugo/shortugo -server-port=8080
+      - ./shortenertest -test.v -test.run=^TestIteration5$ -binary-path=cmd/shortugo/shortugo -server-port=8080
       - ./shortenertest -test.v -test.run=^TestIteration6$ -source-path="."
-      - ./shortenertest -test.v -test.run=^TestIteration7$ -binary-path=cmd/shortener/shortener -source-path="."
-      - ./shortenertest -test.v -test.run=^TestIteration8$ -binary-path=cmd/shortener/shortener
-      - ./shortenertest -test.v -test.run=^TestIteration9$ -binary-path=cmd/shortener/shortener -source-path="." -file-storage-path="db.json"
-      - ./shortenertest -test.v -test.run=^TestIteration10$ -binary-path=cmd/shortener/shortener -source-path="." -database-dsn="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
-      - ./shortenertest -test.v -test.run=^TestIteration11$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
-      - ./shortenertest -test.v -test.run=^TestIteration12$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
-      - ./shortenertest -test.v -test.run=^TestIteration13$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
-      - ./shortenertest -test.v -test.run=^TestIteration14$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
-      - ./shortenertest -test.v -test.run=^TestIteration15$ -binary-path=cmd/shortener/shortener -database-dsn="postgres://postgres:postgres@localhost:5432/practicum?sslmode=disable"
+      - ./shortenertest -test.v -test.run=^TestIteration7$ -binary-path=cmd/shortugo/shortugo -source-path="."
+      - ./shortenertest -test.v -test.run=^TestIteration8$ -binary-path=cmd/shortugo/shortugo
+      - ./shortenertest -test.v -test.run=^TestIteration9$ -binary-path=cmd/shortugo/shortugo -source-path="." -file-storage-path="db.json"
+      - ./shortenertest -test.v -test.run=^TestIteration10$ -binary-path=cmd/shortugo/shortugo -source-path="." -database-dsn="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
+      - ./shortenertest -test.v -test.run=^TestIteration11$ -binary-path=cmd/shortugo/shortugo -database-dsn="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
+      - ./shortenertest -test.v -test.run=^TestIteration12$ -binary-path=cmd/shortugo/shortugo -database-dsn="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
+      - ./shortenertest -test.v -test.run=^TestIteration13$ -binary-path=cmd/shortugo/shortugo -database-dsn="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
+      - ./shortenertest -test.v -test.run=^TestIteration14$ -binary-path=cmd/shortugo/shortugo -database-dsn="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
+      - ./shortenertest -test.v -test.run=^TestIteration15$ -binary-path=cmd/shortugo/shortugo -database-dsn="postgres://postgres:postgres@localhost:5432/praktikum?sslmode=disable"
+      - ./shortenertest -test.v -test.run=^TestIteration16$ -source-path="."
+      - ./shortenertest -test.v -test.run=^TestIteration17$ -source-path="."
+      - ./shortenertest -test.v -test.run=^TestIteration18$ -source-path="."
+
+  18:
+    desc: build and run tests
+    deps:
+      - build
+    cmds:
+      - ./shortenertest -test.v -test.run=^TestIteration18$ -source-path="."
+

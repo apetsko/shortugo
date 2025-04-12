@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/apetsko/shortugo/internal/models"
+	"github.com/apetsko/shortugo/internal/storages/shared"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -140,6 +141,214 @@ func TestStorage_GetAllLinksByUser000ID(t *testing.T) {
 			gotRr, err := im.ListLinksByUserID(ctx, "", userID)
 			require.NoError(t, err)
 			assert.Equalf(t, tests[userID], gotRr, "ListLinksByUserID(%v, %v)", ctx, userID)
+		})
+	}
+}
+
+func TestStorage_PutAndGet(t *testing.T) {
+	store := New()
+	ctx := context.Background()
+
+	testCases := []struct {
+		name    string
+		wantURL string
+		wantErr error
+		record  models.URLRecord
+	}{
+		{
+			name: "Valid record",
+			record: models.URLRecord{
+				ID:     "short1",
+				URL:    "https://example.com",
+				UserID: "user1",
+			},
+			wantURL: "https://example.com",
+			wantErr: nil,
+		},
+		{
+			name: "Another valid record",
+			record: models.URLRecord{
+				ID:     "short2",
+				URL:    "https://test.com",
+				UserID: "user2",
+			},
+			wantURL: "https://test.com",
+			wantErr: nil,
+		},
+		{
+			name:    "Not found",
+			record:  models.URLRecord{},
+			wantURL: "",
+			wantErr: shared.ErrNotFound,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.record.ID != "" {
+				require.NoError(t, store.Put(ctx, tc.record))
+			}
+
+			gotURL, err := store.Get(ctx, tc.record.ID)
+
+			if tc.wantErr != nil {
+				assert.ErrorIs(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tc.wantURL, gotURL)
+			}
+		})
+	}
+}
+
+func TestStorage_DeleteUserURLs(t *testing.T) {
+	store := New()
+	ctx := context.Background()
+
+	records := []models.URLRecord{
+		{ID: "short1", URL: "https://example.com", UserID: "user1"},
+		{ID: "short2", URL: "https://test.com", UserID: "user1"},
+	}
+
+	for _, r := range records {
+		require.NoError(t, store.Put(ctx, r))
+	}
+
+	testCases := []struct {
+		wantErr error
+		name    string
+		userID  string
+		ids     []string
+	}{
+		{
+			name:   "Delete existing URL",
+			ids:    []string{"short1"},
+			userID: "user1",
+		},
+		{
+			name:    "Delete non-existing URL",
+			ids:     []string{"short3"},
+			userID:  "user1",
+			wantErr: shared.ErrNotFound,
+		},
+		{
+			name:   "Delete with wrong userID",
+			ids:    []string{"short2"},
+			userID: "user2",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := store.DeleteUserURLs(ctx, tc.ids, tc.userID)
+			assert.NoError(t, err)
+
+			for _, id := range tc.ids {
+				_, err := store.Get(ctx, id)
+				if tc.userID == "user1" && id == "short1" {
+					assert.ErrorIs(t, err, shared.ErrGone)
+				} else if id == "short3" {
+					assert.ErrorIs(t, err, shared.ErrNotFound)
+				} else {
+					assert.NoError(t, err)
+				}
+			}
+		})
+	}
+}
+
+func TestStorage_ListLinksByUserID(t *testing.T) {
+	store := New()
+	ctx := context.Background()
+
+	records := []models.URLRecord{
+		{ID: "short1", URL: "https://example.com", UserID: "user1"},
+		{ID: "short2", URL: "https://test.com", UserID: "user1"},
+		{ID: "short3", URL: "https://another.com", UserID: "user2"},
+	}
+
+	for _, r := range records {
+		require.NoError(t, store.Put(ctx, r))
+	}
+
+	testCases := []struct {
+		wantErr error
+		name    string
+		userID  string
+		baseURL string
+		wantLen int
+	}{
+		{nil, "List for user1", "user1", "https://short.ly", 2},
+		{nil, "List for user2", "user2", "https://short.ly", 1},
+		{shared.ErrNotFound, "List for non-existent user", "user3", "https://short.ly", 0},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			links, err := store.ListLinksByUserID(ctx, tc.baseURL, tc.userID)
+
+			if tc.wantErr != nil {
+				assert.ErrorIs(t, err, tc.wantErr)
+			} else {
+				require.NoError(t, err)
+				assert.Len(t, links, tc.wantLen)
+			}
+		})
+	}
+}
+
+func TestStorage_PutBatch(t *testing.T) {
+	store := New()
+	ctx := context.Background()
+
+	testCases := []struct {
+		wantErr error
+		name    string
+		records []models.URLRecord
+	}{
+		{
+			name: "Insert batch of records",
+			records: []models.URLRecord{
+				{ID: "batch1", URL: "https://batch1.com", UserID: "user1"},
+				{ID: "batch2", URL: "https://batch2.com", UserID: "user1"},
+			},
+			wantErr: nil,
+		},
+		{
+			name:    "Empty batch",
+			records: []models.URLRecord{},
+			wantErr: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := store.PutBatch(ctx, tc.records)
+			require.NoError(t, err)
+
+			for _, r := range tc.records {
+				gotURL, err := store.Get(ctx, r.ID)
+				require.NoError(t, err)
+				assert.Equal(t, r.URL, gotURL)
+			}
+		})
+	}
+}
+
+func TestStorage_PingAndClose(t *testing.T) {
+	store := New()
+
+	testCases := []struct {
+		fn   func() error
+		name string
+	}{
+		{name: "Close", fn: store.Close},
+		{name: "Ping", fn: store.Ping},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.NoError(t, tc.fn())
 		})
 	}
 }

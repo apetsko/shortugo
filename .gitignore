@@ -14,6 +14,7 @@
 # Binaries
 cmd/shortener/main
 cmd/shortener/shortener
+/shortener
 /shortenertest
 
 # Dependency directories (remove the comment below to include it)
@@ -27,3 +28,12 @@ golangci-lint
 *.json
 
 
+/.golangci.bck.yml
+
+/coverage.html
+/statictest
+/cmd/shortugo/shortener
+/cmd/shortugo/shortugo
+/cmd/staticlint/staticlint
+/staticlint
+/.task/

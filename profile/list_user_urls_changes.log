@@ -1,0 +1,2 @@
+- use json.NewEncoder(&buf) instead json.Marshal
+- replace fmt.Sprintf with concatenation func
