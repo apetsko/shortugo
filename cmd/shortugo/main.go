@@ -14,6 +14,7 @@ import (
 	"github.com/apetsko/shortugo/internal/server"
 )
 
+// Build info vars
 var (
 	BuildVersion = "N/A"
 	BuildDate    = "N/A"
