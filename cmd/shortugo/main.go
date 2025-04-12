@@ -38,8 +38,7 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-	var storage handlers.Storage
-	storage, err = storages.Init(cfg.DatabaseDSN, cfg.FileStoragePath, logger)
+	storage, err := storages.Init(cfg.DatabaseDSN, cfg.FileStoragePath, logger)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}
