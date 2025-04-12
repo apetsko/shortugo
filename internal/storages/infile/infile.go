@@ -1,3 +1,5 @@
+// Package infile provides a file-based storage implementation for the application.
+// It includes methods for storing, retrieving, and managing URL records in a file.
 package infile
 
 import (
@@ -15,7 +17,7 @@ import (
 	"github.com/apetsko/shortugo/internal/storages/shared"
 )
 
-// File permissions for user read/write, group read, others read.
+// FilePermUserRWGroupROthersR File permissions for user read/write, group read, others read.
 const FilePermUserRWGroupROthersR = 0644
 
 // CustomBool is a custom boolean type for JSON marshaling/unmarshaling.
@@ -192,8 +194,22 @@ func (f *Storage) DeleteUserURLs(ctx context.Context, ids []string, userID strin
 	if err != nil {
 		return fmt.Errorf("error creating temp file: %w", err)
 	}
-	defer os.Remove(tmpFilename)
-	defer tmpFile.Close()
+
+	defer func() {
+		closeErr := tmpFile.Close()
+		if closeErr != nil && err == nil {
+			err = fmt.Errorf("error closing temp file: %w", closeErr)
+		}
+	}()
+
+	defer func() {
+		if err != nil {
+			removeErr := os.Remove(tmpFilename)
+			if removeErr != nil {
+				err = fmt.Errorf("error removing temp file: %w (original error: %v)", removeErr, err)
+			}
+		}
+	}()
 
 	if err := f.copyAndMarkDeleted(tmpFile, ids, userID); err != nil {
 		return err
@@ -271,7 +287,9 @@ func writeRecord(writer *bufio.Writer, r *models.URLRecord) error {
 
 // replaceFile replaces the original storage file with the temporary file.
 func (f *Storage) replaceFile(tmpFilename string) error {
-	f.file.Close()
+	if err := f.file.Close(); err != nil {
+		return fmt.Errorf("error closing temp file: %w", err)
+	}
 
 	if err := os.Rename(tmpFilename, f.file.Name()); err != nil {
 		return fmt.Errorf("error replacing storage file: %w", err)

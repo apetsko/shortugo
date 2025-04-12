@@ -9,8 +9,8 @@ import (
 
 func TestParse(t *testing.T) {
 	tests := []struct {
-		name    string
 		wantC   *Config
+		name    string
 		wantErr bool
 	}{
 		{

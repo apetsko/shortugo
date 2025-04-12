@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/apetsko/shortugo/internal/config"
@@ -13,7 +14,18 @@ import (
 	"github.com/apetsko/shortugo/internal/server"
 )
 
+// Build info vars
+var (
+	BuildVersion = "N/A"
+	BuildDate    = "N/A"
+	BuildCommit  = "N/A"
+)
+
 func main() {
+	fmt.Printf("Build version: %s\n", BuildVersion)
+	fmt.Printf("Build date: %s\n", BuildDate)
+	fmt.Printf("Build commit: %s\n", BuildCommit)
+
 	logger, err := logging.New(zapcore.DebugLevel)
 	if err != nil {
 		log.Fatal("Failed to initialize logger:", err)
@@ -26,8 +38,7 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-	var storage handlers.Storage
-	storage, err = storages.Init(cfg.DatabaseDSN, cfg.FileStoragePath, logger)
+	storage, err := storages.Init(cfg.DatabaseDSN, cfg.FileStoragePath, logger)
 	if err != nil {
 		logger.Fatal(err.Error())
 	}

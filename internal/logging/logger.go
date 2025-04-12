@@ -1,3 +1,6 @@
+// Package logging provides structured logging functionality for the application.
+// It wraps the zap.SugaredLogger to enable easy and efficient logging with support
+// for different log levels and structured log entries.
 package logging
 
 import (

@@ -9,19 +9,17 @@ on:
 jobs:
   unittest:
     runs-on: ubuntu-latest
+    container: golang:1.23
 
     services:
       postgres:
-        image: postgres:17
+        image: postgres
         env:
-          POSTGRES_USER: testuser
-          POSTGRES_PASSWORD: testpass
-          POSTGRES_DB: testdb
-        ports:
-          - 5432:5432
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: praktikum
         options: >-
-          --health-cmd "pg_isready -U testuser"
-          --health-interval 10s
+          --health-cmd pg_isready
+          --health-interval 5s
           --health-timeout 5s
           --health-retries 5
 
@@ -37,7 +35,7 @@ jobs:
         run: go mod verify
 
       - name: Build
-        run: go build -v ./...
+        run: go build -buildvcs=false -v ./...
 
       - name: Run go vet
         run: go vet ./...

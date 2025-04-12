@@ -34,3 +34,6 @@ golangci-lint
 /statictest
 /cmd/shortugo/shortener
 /cmd/shortugo/shortugo
+/cmd/staticlint/staticlint
+/staticlint
+/.task/

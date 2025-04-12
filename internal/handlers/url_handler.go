@@ -29,11 +29,11 @@ type Storage interface {
 // URLHandler handles URL shortening and related operations.
 type URLHandler struct {
 	Auth     auth.Authenticator             // Authenticator for user authentication.
-	BaseURL  string                         // Base URL for shortened links.
 	Storage  Storage                        // Storage interface for URL operations.
-	Secret   string                         // Secret key for authentication.
 	ToDelete chan models.BatchDeleteRequest // Channel for batch delete requests.
 	Logger   *logging.Logger                // Logger for logging operations.
+	Secret   string                         // Secret key for authentication.
+	BaseURL  string                         // Base URL for shortened links.
 }
 
 // NewURLHandler creates a new URLHandler instance.

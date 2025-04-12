@@ -1,3 +1,7 @@
+// Package auth provides functionality for handling user authentication
+// through secure cookies. It includes methods for setting and retrieving
+// user IDs from HTTP requests and responses, ensuring secure and reliable
+// authentication management.
 package auth
 
 import (

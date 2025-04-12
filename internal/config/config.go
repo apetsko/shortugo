@@ -1,3 +1,6 @@
+// Package config provides functionality for managing application configuration.
+// It supports loading configuration values from environment variables and command-line flags,
+// ensuring flexibility and ease of use in different deployment environments.
 package config
 
 import (
