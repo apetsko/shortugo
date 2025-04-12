@@ -22,9 +22,9 @@ var (
 )
 
 func main() {
-	fmt.Printf("Build version: %s\n", BuildVersion)
-	fmt.Printf("Build date: %s\n", BuildDate)
-	fmt.Printf("Build commit: %s\n", BuildCommit)
+	fmt.Println("Build version: " + BuildVersion)
+	fmt.Println("Build date: " + BuildDate)
+	fmt.Println("Build commit: " + BuildCommit)
 
 	logger, err := logging.New(zapcore.DebugLevel)
 	if err != nil {
