@@ -20,8 +20,12 @@ func setupTempStorage(t *testing.T) (*Storage, func()) {
 	require.NoError(t, err, "failed to create storage")
 
 	return store, func() {
-		store.Close()
-		os.Remove(tmpFile.Name())
+		if err := store.Close(); err != nil {
+			t.Errorf("failed to close storage: %v", err)
+		}
+		if err := os.Remove(tmpFile.Name()); err != nil {
+			t.Errorf("failed to remove temp file: %v", err)
+		}
 	}
 }
 

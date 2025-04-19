@@ -2,6 +2,25 @@ version: "3"
 
 tasks:
 
+
+  build-multichecker:
+    desc: Build the custom static linter
+    cmds:
+      - go build -o staticlint ./cmd/staticlint
+    sources:
+      - ./cmd/staticlint/**/*.go
+    generates:
+      - staticlint
+
+  multichecker:
+    desc: Run static analysis using the custom linter
+    deps:
+      - build-multichecker
+    cmds:
+      - go vet -vettool={{.PWD}}/staticlint ./...
+
+
+
   lint:
     desc: Run linters using golangci-lint
     cmds:

@@ -15,9 +15,9 @@ func TestAuth_CookieSetUserID(t *testing.T) {
 	secret := "test_secret"
 
 	testCases := []struct {
+		wantErr error
 		name    string
 		secret  string
-		wantErr error
 	}{
 		{
 			name:    "Valid cookie set",
@@ -44,7 +44,9 @@ func TestAuth_CookieSetUserID(t *testing.T) {
 				assert.Len(t, userID, 16)
 
 				resp := w.Result()
-				defer resp.Body.Close()
+				defer func() {
+					require.NoError(t, resp.Body.Close())
+				}()
 				cookie := resp.Cookies()
 				require.Len(t, cookie, 1)
 				assert.Equal(t, "shortugo", cookie[0].Name)
@@ -58,10 +60,10 @@ func TestAuth_CookieGetUserID(t *testing.T) {
 	secret := "test_secret"
 
 	testCases := []struct {
-		name        string
-		setupCookie bool
-		secret      string
 		wantErr     error
+		name        string
+		secret      string
+		setupCookie bool
 	}{
 		{
 			name:        "Valid user ID retrieved",
@@ -93,7 +95,9 @@ func TestAuth_CookieGetUserID(t *testing.T) {
 				require.NoError(t, err)
 
 				resp := w.Result()
-				defer resp.Body.Close()
+				defer func() {
+					require.NoError(t, resp.Body.Close())
+				}()
 				cookies := resp.Cookies()
 				require.Len(t, cookies, 1)
 

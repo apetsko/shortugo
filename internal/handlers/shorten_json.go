@@ -39,7 +39,11 @@ func (h *URLHandler) ShortenJSON(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure the request body is closed after reading
-	defer r.Body.Close()
+	defer func() {
+		if err2 := r.Body.Close(); err2 != nil {
+			h.Logger.Error("Failed to close request body", "error", err2.Error())
+		}
+	}()
 
 	// Read the request body
 	body, err := io.ReadAll(r.Body)

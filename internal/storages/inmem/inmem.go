@@ -1,3 +1,5 @@
+// Package inmem provides an in-memory storage implementation for the application.
+// It includes methods for storing, retrieving, and managing URL records in memory.
 package inmem
 
 import (

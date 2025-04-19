@@ -17,6 +17,7 @@ import (
 	"github.com/apetsko/shortugo/internal/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -52,7 +53,7 @@ func BenchmarkShortenJSON(b *testing.B) {
 
 		body, err := io.ReadAll(resp.Body)
 		assert.NoError(b, err, "Reading response body should not return an error")
-		resp.Body.Close()
+		require.NoError(b, resp.Body.Close())
 
 		var result models.Result
 		err = json.Unmarshal(body, &result)
@@ -68,12 +69,12 @@ func TestShortenJSON(t *testing.T) {
 	shortenURL := fmt.Sprintf(`{"result":"%s/%s"}`, baseURL, shortenID)
 
 	tests := []struct {
-		name             string
 		mockAuthSetup    func(mockAuth *mocks.Authenticator)
 		mockStorageSetup func(mockStorage *mocks.Storage)
+		name             string
 		requestBody      string
-		expectedStatus   int
 		expectedBody     string
+		expectedStatus   int
 	}{
 		{
 			name: "successful URL shortening",
