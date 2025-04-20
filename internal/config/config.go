@@ -4,8 +4,10 @@
 package config
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/apetsko/shortugo/internal/utils"
 	"github.com/caarlos0/env/v11"
@@ -59,7 +61,7 @@ func New() (*Config, error) {
 
 	// Parse config.json
 	if c.Config != "" {
-		if err := utils.LoadJSONConfig(c.Config, &c); err != nil {
+		if err := LoadJSONConfig(c.Config, &c); err != nil {
 			return nil, fmt.Errorf("failed to load config from json file: %w", err)
 		}
 	}
@@ -79,4 +81,25 @@ func New() (*Config, error) {
 
 	// Return the populated and validated Config
 	return &c, nil
+}
+
+// LoadJSONConfig reads config.json file
+func LoadJSONConfig(path string, out interface{}) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return fmt.Errorf("open config file: %w", err)
+	}
+	defer func() {
+		err := file.Close()
+		if err != nil {
+			fmt.Printf("failed to close config file: %s", err)
+		}
+	}()
+
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(out); err != nil {
+		return fmt.Errorf("decode config: %w", err)
+	}
+
+	return nil
 }

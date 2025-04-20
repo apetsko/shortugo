@@ -7,9 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-	"os"
 	"sync"
 
 	"github.com/go-playground/validator/v10"
@@ -56,25 +54,4 @@ func getValidator() *validator.Validate {
 // a is the struct to validate.
 func ValidateStruct(a any) error {
 	return getValidator().Struct(a)
-}
-
-// LoadJSONConfig reads config.json file
-func LoadJSONConfig(path string, out interface{}) error {
-	file, err := os.Open(path)
-	if err != nil {
-		return fmt.Errorf("open config file: %w", err)
-	}
-	defer func() {
-		err := file.Close()
-		if err != nil {
-			fmt.Printf("failed to close config file: %s", err)
-		}
-	}()
-
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(out); err != nil {
-		return fmt.Errorf("decode config: %w", err)
-	}
-
-	return nil
 }

@@ -1,11 +1,57 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type mockConfig struct {
+	Host            string `json:"Host"`
+	BaseURL         string `json:"BaseURL"`
+	FileStoragePath string `json:"FileStoragePath"`
+	DatabaseDSN     string `json:"DatabaseDSN"`
+	Secret          string `json:"Secret"`
+	TLSCertPath     string `json:"TLSCertPath"`
+	TLSKeyPath      string `json:"TLSKeyPath"`
+	EnableHTTPS     bool   `json:"EnableHTTPS"`
+}
+
+func TestLoadJSONConfig(t *testing.T) {
+	// Временный JSON-файл
+	tmpDir := t.TempDir()
+	tmpFile := filepath.Join(tmpDir, "config.json")
+
+	jsonContent := `{
+		"EnableHTTPS": true,
+		"TLSCertPath": "certs/cert.crt",
+		"TLSKeyPath": "certs/cert.key",
+		"Host": ":8080",
+		"BaseURL": "https://localhost:8080",
+		"FileStoragePath": "./tmp/shorten-db.json",
+		"DatabaseDSN": "",
+		"Secret": "super-secret"
+	}`
+
+	err := os.WriteFile(tmpFile, []byte(jsonContent), 0600)
+	require.NoError(t, err)
+
+	var cfg mockConfig
+	err = LoadJSONConfig(tmpFile, &cfg)
+	require.NoError(t, err)
+
+	assert.Equal(t, true, cfg.EnableHTTPS)
+	assert.Equal(t, "certs/cert.crt", cfg.TLSCertPath)
+	assert.Equal(t, "certs/cert.key", cfg.TLSKeyPath)
+	assert.Equal(t, ":8080", cfg.Host)
+	assert.Equal(t, "https://localhost:8080", cfg.BaseURL)
+	assert.Equal(t, "./tmp/shorten-db.json", cfg.FileStoragePath)
+	assert.Equal(t, "", cfg.DatabaseDSN)
+	assert.Equal(t, "super-secret", cfg.Secret)
+}
 
 func TestParse(t *testing.T) {
 	tests := []struct {
