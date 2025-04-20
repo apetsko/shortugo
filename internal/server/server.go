@@ -1,20 +1,38 @@
 package server
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/apetsko/shortugo/internal/config"
+	"github.com/apetsko/shortugo/internal/handlers"
+	"github.com/apetsko/shortugo/internal/logging"
 )
 
-// New creates and configures a new HTTP server.
+// Run creates and configures and run a new HTTP server.
 // a is the address the server will listen on.
-// r is the router that will handle the incoming requests.
-func New(a string, r *chi.Mux) *http.Server {
-	server := &http.Server{
-		Addr:              a,               // Address to listen on.
-		ReadHeaderTimeout: 3 * time.Second, // Maximum duration for reading the request headers.
-		Handler:           r,               // HTTP handler to invoke.
+// h is the handler that will be used by router the incoming requests.
+func Run(cfg *config.Config, h *handlers.URLHandler, logger *logging.Logger) (*http.Server, error) {
+	srv := &http.Server{
+		Addr:              cfg.Host,
+		Handler:           Router(h),
+		ReadHeaderTimeout: 3 * time.Second,
 	}
-	return server
+
+	logger.Info(fmt.Sprintf("Starting server at %s, TLS enabled: %t", srv.Addr, cfg.EnableHTTPS))
+
+	var err error
+	if cfg.EnableHTTPS {
+		err = srv.ListenAndServeTLS(cfg.TLSCertPath, cfg.TLSKeyPath)
+	} else {
+		err = srv.ListenAndServe()
+	}
+
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Error("server error", err)
+	}
+
+	return srv, nil
 }

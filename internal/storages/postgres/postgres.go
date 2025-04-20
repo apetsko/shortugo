@@ -78,10 +78,9 @@ func (p *Storage) Close() error {
 // waitForDB пытается подключиться к БД несколько раз с интервалами
 func waitForDB(conn string, logger *logging.Logger) error {
 	var lastErr error
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
 	for i := 0; i < 10; i++ {
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-		defer cancel()
-
 		pool, err := pgxpool.New(ctx, conn)
 		if err == nil {
 			pool.Close()

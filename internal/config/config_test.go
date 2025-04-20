@@ -15,7 +15,7 @@ func TestParse(t *testing.T) {
 	}{
 		{
 			name:    "OK",
-			wantC:   &Config{Host: "localhost:8080", BaseURL: "http://localhost:8080", FileStoragePath: "db.json", Secret: "fortytwo"},
+			wantC:   &Config{EnableHTTPS: false, TLSCertPath: "certs/cert.crt", TLSKeyPath: "certs/cert.key", Config: "", Host: "localhost:8080", BaseURL: "http://localhost:8080", FileStoragePath: "db.json", DatabaseDSN: "", Secret: "fortytwo"},
 			wantErr: false,
 		},
 	}

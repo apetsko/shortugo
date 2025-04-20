@@ -44,7 +44,7 @@ func main() {
 	}
 
 	defer func(storage handlers.Storage) {
-		err := storage.Close()
+		err = storage.Close()
 		if err != nil {
 			logger.Fatal("failed to close storage: " + err.Error())
 		}
@@ -54,11 +54,8 @@ func main() {
 
 	go storages.StartBatchDeleteProcessor(context.Background(), storage, handler.ToDelete, logger)
 
-	router := server.Router(handler)
-	s := server.New(cfg.Host, router)
-
-	logger.Info("running server on " + cfg.Host)
-	if err := s.ListenAndServe(); err != nil {
-		logger.Fatal(err.Error())
+	_, err = server.Run(cfg, handler, logger)
+	if err != nil {
+		logger.Fatal("Server failed: " + err.Error())
 	}
 }

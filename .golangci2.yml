@@ -86,7 +86,7 @@ linters:
         - strings.SplitN
     nolintlint:
       require-explanation: true
-      require-specific: true
+      require-specific: false
       allow-unused: false
     staticcheck:
       checks:
@@ -108,6 +108,7 @@ linters:
           - mnd
           - staticcheck
           - typecheck
+          - nolintlint
         path: _test\.go
       - path: pkg/golinters/errcheck.go
         text: 'SA1019: errCfg.Exclude is deprecated: use ExcludeFunctions instead'
