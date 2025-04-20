@@ -4,14 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/apetsko/shortugo/internal/config"
 	"github.com/apetsko/shortugo/internal/handlers"
-	"github.com/apetsko/shortugo/internal/storages"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/apetsko/shortugo/internal/logging"
 	"github.com/apetsko/shortugo/internal/server"
+	"github.com/apetsko/shortugo/internal/storages"
+	"go.uber.org/zap/zapcore"
 )
 
 // Build info vars
@@ -43,19 +46,40 @@ func main() {
 		logger.Fatal(err.Error())
 	}
 
-	defer func(storage handlers.Storage) {
+	defer func() {
 		err = storage.Close()
 		if err != nil {
 			logger.Fatal("failed to close storage: " + err.Error())
 		}
-	}(storage)
+	}()
 
 	handler := handlers.NewURLHandler(cfg.BaseURL, storage, logger, cfg.Secret)
 
-	go storages.StartBatchDeleteProcessor(context.Background(), storage, handler.ToDelete, logger)
+	// Batch deletion
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go storages.StartBatchDeleteProcessor(ctx, storage, handler.ToDelete, logger)
 
-	_, err = server.Run(cfg, handler, logger)
+	// Start server
+	srv, err := server.Run(cfg, handler, logger)
 	if err != nil {
 		logger.Fatal("Server failed: " + err.Error())
 	}
+
+	// Graceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+
+	<-stop
+	logger.Info("Shutting down server...")
+
+	timeout := 5 * time.Second
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), timeout)
+	defer shutdownCancel()
+
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		logger.Fatal("Graceful shutdown failed: " + err.Error())
+	}
+
+	logger.Info("Server gracefully stopped")
 }

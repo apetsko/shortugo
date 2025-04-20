@@ -21,18 +21,19 @@ func Run(cfg *config.Config, h *handlers.URLHandler, logger *logging.Logger) (*h
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
-	logger.Info(fmt.Sprintf("Starting server at %s, TLS enabled: %t", srv.Addr, cfg.EnableHTTPS))
+	go func() {
+		logger.Info(fmt.Sprintf("Starting server at %s, TLS enabled: %t", srv.Addr, cfg.EnableHTTPS))
+		var err error
+		if cfg.EnableHTTPS {
+			err = srv.ListenAndServeTLS(cfg.TLSCertPath, cfg.TLSKeyPath)
+		} else {
+			err = srv.ListenAndServe()
+		}
 
-	var err error
-	if cfg.EnableHTTPS {
-		err = srv.ListenAndServeTLS(cfg.TLSCertPath, cfg.TLSKeyPath)
-	} else {
-		err = srv.ListenAndServe()
-	}
-
-	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		logger.Error("server error", err)
-	}
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.Error("server error", err)
+		}
+	}()
 
 	return srv, nil
 }
