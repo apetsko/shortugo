@@ -37,14 +37,14 @@ func TestLoadJSONConfig(t *testing.T) {
 		"Secret": "super-secret"
 	}`
 
-	badJsonContent := `{ret": "super-secretbsdb2 }`
+	badJSONContent := `{ret": "super-secretbsdb2 }`
 
 	var cfg mockConfig
 
 	err := LoadJSONConfig(badfile, &cfg)
 	require.Error(t, err)
 
-	err = os.WriteFile(tmpFile, []byte(badJsonContent), 0600)
+	err = os.WriteFile(tmpFile, []byte(badJSONContent), 0600)
 	require.NoError(t, err)
 
 	err = LoadJSONConfig(tmpFile, &cfg)
