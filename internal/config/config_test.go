@@ -24,6 +24,7 @@ func TestLoadJSONConfig(t *testing.T) {
 	// Временный JSON-файл
 	tmpDir := t.TempDir()
 	tmpFile := filepath.Join(tmpDir, "config.json")
+	badfile := "notExistFile.json"
 
 	jsonContent := `{
 		"EnableHTTPS": true,
@@ -36,10 +37,22 @@ func TestLoadJSONConfig(t *testing.T) {
 		"Secret": "super-secret"
 	}`
 
-	err := os.WriteFile(tmpFile, []byte(jsonContent), 0600)
-	require.NoError(t, err)
+	badJsonContent := `{ret": "super-secretbsdb2 }`
 
 	var cfg mockConfig
+
+	err := LoadJSONConfig(badfile, &cfg)
+	require.Error(t, err)
+
+	err = os.WriteFile(tmpFile, []byte(badJsonContent), 0600)
+	require.NoError(t, err)
+
+	err = LoadJSONConfig(tmpFile, &cfg)
+	require.Error(t, err)
+
+	err = os.WriteFile(tmpFile, []byte(jsonContent), 0600)
+	require.NoError(t, err)
+
 	err = LoadJSONConfig(tmpFile, &cfg)
 	require.NoError(t, err)
 
