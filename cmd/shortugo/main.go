@@ -68,7 +68,7 @@ func main() {
 
 	// Graceful shutdown
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 
 	<-stop
 	logger.Info("Shutting down server...")
