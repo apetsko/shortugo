@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -67,10 +66,10 @@ func main() {
 	}
 
 	// Graceful shutdown
-	stop := make(chan os.Signal, 1)
-	signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
+	defer stop()
 
-	<-stop
+	<-ctx.Done()
 	logger.Info("Shutting down server...")
 
 	timeout := 5 * time.Second
