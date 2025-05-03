@@ -2,6 +2,20 @@ version: "3"
 
 tasks:
 
+  gen-certs:
+    desc: Generate self-signed certs
+    cmds:
+      - mkdir -p certs
+      - |
+        openssl req -x509 -newkey rsa:4096 -nodes \
+        -keyout certs/cert.key \
+        -out certs/cert.crt \
+        -sha256 -days 365 \
+        -subj "/C=KZ/ST=Chicago/L=Chicago/O=Shortugo/OU=Dev/CN=localhost"
+    generates:
+      - certs/cert.crt
+      - certs/cert.key
+    silent: false
 
   build-multichecker:
     desc: Build the custom static linter
@@ -36,7 +50,8 @@ tasks:
   cover:
     desc: Check test coverage
     cmds:
-      - go test ./... -coverprofile=./cover.out -covermode=atomic -coverpkg=./...
+      - go test ./... -coverprofile=./cover.tmp.out -covermode=atomic -coverpkg=./...
+      - grep -vE "/(mocks|main|noexit|multichecker)" cover.tmp.out > cover.out
       - go-test-coverage --config=./.testcoverage.yml
       - go tool cover -html=cover.out -o coverage.html
     silent: true

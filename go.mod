@@ -9,6 +9,7 @@ require github.com/stretchr/testify v1.10.0
 require (
 	github.com/400f/sqlpassctxcheck v0.2.1
 	github.com/caarlos0/env/v11 v11.3.1
+	github.com/go-playground/assert/v2 v2.2.0
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/gorilla/securecookie v1.1.2
 	github.com/kisielk/errcheck v1.9.0

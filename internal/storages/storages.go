@@ -63,25 +63,29 @@ func StartBatchDeleteProcessor(ctx context.Context, s Storage, input <-chan mode
 
 	for {
 		select {
-		case req := <-input:
-			// Add request to the batch.
-			mu.Lock()
-			batch = append(batch, req)
-			if len(batch) >= batchSize {
-				// Flush the batch if it reaches the batch size.
-				flushBatch(ctx, s, &batch, logger)
-			}
-			mu.Unlock()
-		case <-ticker.C:
-			// Flush the batch at regular intervals.
+		case <-ctx.Done():
 			mu.Lock()
 			if len(batch) > 0 {
 				flushBatch(ctx, s, &batch, logger)
 			}
 			mu.Unlock()
-		case <-ctx.Done():
-			// Exit the processor when the context is done.
+			logger.Info("Stopping batch delete processor")
 			return
+
+		case req := <-input:
+			mu.Lock()
+			batch = append(batch, req)
+			if len(batch) >= batchSize {
+				flushBatch(ctx, s, &batch, logger)
+			}
+			mu.Unlock()
+
+		case <-ticker.C:
+			mu.Lock()
+			if len(batch) > 0 {
+				flushBatch(ctx, s, &batch, logger)
+			}
+			mu.Unlock()
 		}
 	}
 }
