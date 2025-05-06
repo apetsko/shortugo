@@ -38,3 +38,9 @@ type UserURL struct {
 	ShortURL    string `json:"short_url"`    // Shortened URL.
 	OriginalURL string `json:"original_url"` // Original URL.
 }
+
+// Stats presents count of users and urls
+type Stats struct {
+	Urls  int `json:"urls"`
+	Users int `json:"users"`
+}

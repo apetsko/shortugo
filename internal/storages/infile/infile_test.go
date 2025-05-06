@@ -126,3 +126,27 @@ func TestStorage_Ping(t *testing.T) {
 	err := store.Ping()
 	assert.NoError(t, err, "Ping should always return nil")
 }
+
+func TestStorage_Stats(t *testing.T) {
+	store, cleanup := setupTempStorage(t)
+	defer cleanup()
+
+	ctx := context.Background()
+
+	records := []models.URLRecord{
+		{ID: "a", URL: "http://a.com", UserID: "user1"},
+		{ID: "b", URL: "http://b.com", UserID: "user2"},
+		{ID: "c", URL: "http://c.com", UserID: "user1"}, // повтор user1
+	}
+
+	for _, rec := range records {
+		err := store.Put(ctx, rec)
+		require.NoError(t, err, "Put failed")
+	}
+
+	stats, err := store.Stats(ctx)
+	require.NoError(t, err, "Stats failed")
+
+	assert.Equal(t, 3, stats.Urls, "URLs count mismatch")
+	assert.Equal(t, 2, stats.Users, "Users count mismatch")
+}

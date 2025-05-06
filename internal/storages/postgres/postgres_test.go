@@ -194,3 +194,26 @@ func TestStorage_PutBatch(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "https://batch2.com", gotURL2)
 }
+
+// TestStorage_Stats tests the Stats method of the Storage.
+// It verifies that the correct number of URLs and unique users is returned.
+func TestStorage_Stats(t *testing.T) {
+	storage := setupTestStorage(t)
+	ctx := context.Background()
+
+	records := []models.URLRecord{
+		{ID: "1", URL: "https://a.com", UserID: "user1"},
+		{ID: "2", URL: "https://b.com", UserID: "user2"},
+		{ID: "3", URL: "https://c.com", UserID: "user1"}, // тот же пользователь
+	}
+
+	for _, r := range records {
+		err := storage.Put(ctx, r)
+		require.NoError(t, err)
+	}
+
+	stats, err := storage.Stats(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, 7, stats.Urls)
+	assert.Equal(t, 5, stats.Users)
+}

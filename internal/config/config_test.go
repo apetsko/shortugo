@@ -17,6 +17,7 @@ type mockConfig struct {
 	Secret          string `json:"Secret"`
 	TLSCertPath     string `json:"TLSCertPath"`
 	TLSKeyPath      string `json:"TLSKeyPath"`
+	TrustedSubnet   string `json:"TrustedSubnet"`
 	EnableHTTPS     bool   `json:"EnableHTTPS"`
 }
 
@@ -34,7 +35,8 @@ func TestLoadJSONConfig(t *testing.T) {
 		"BaseURL": "https://localhost:8080",
 		"FileStoragePath": "./tmp/shorten-db.json",
 		"DatabaseDSN": "",
-		"Secret": "super-secret"
+		"Secret": "super-secret",
+		"TrustedSubnet": "127.0.0.0/24"
 	}`
 
 	badJSONContent := `{ret": "super-secretbsdb2 }`
@@ -64,6 +66,7 @@ func TestLoadJSONConfig(t *testing.T) {
 	assert.Equal(t, "./tmp/shorten-db.json", cfg.FileStoragePath)
 	assert.Equal(t, "", cfg.DatabaseDSN)
 	assert.Equal(t, "super-secret", cfg.Secret)
+	assert.Equal(t, "127.0.0.0/24", cfg.TrustedSubnet)
 }
 
 func TestParse(t *testing.T) {
@@ -74,13 +77,15 @@ func TestParse(t *testing.T) {
 	}{
 		{
 			name:    "OK",
-			wantC:   &Config{EnableHTTPS: false, TLSCertPath: "certs/cert.crt", TLSKeyPath: "certs/cert.key", Config: "", Host: "localhost:8080", BaseURL: "http://localhost:8080", FileStoragePath: "db.json", DatabaseDSN: "", Secret: "fortytwo"},
+			wantC:   &Config{EnableHTTPS: false, TLSCertPath: "certs/cert.crt", TLSKeyPath: "certs/cert.key", Config: "", Host: "localhost:8080", BaseURL: "http://localhost:8080", FileStoragePath: "db.json", DatabaseDSN: "", Secret: "fortytwo", TrustedSubnet: "127.0.0.0/24"},
 			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			gotC, err := New()
+			t.Log(gotC)
+			t.Log(tt.wantC)
 			require.Equal(t, tt.wantErr, err != nil)
 			assert.Equal(t, tt.wantC, gotC)
 		})

@@ -225,6 +225,35 @@ func (p *Storage) DeleteUserURLs(ctx context.Context, ids []string, userID strin
 	return nil
 }
 
+// Stats retrieves count stats: urls and users.
+func (p *Storage) Stats(ctx context.Context) (*models.Stats, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	const query = `
+		SELECT COUNT(*) AS total_links, COUNT(DISTINCT user_id) AS unique_users
+		FROM urls;
+	`
+
+	var totalLinks int
+	var uniqueUsers int
+
+	err := p.pool.QueryRow(ctx, query).Scan(&totalLinks, &uniqueUsers)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query stats: %w", err)
+	}
+
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	return &models.Stats{
+		Urls:  totalLinks,
+		Users: uniqueUsers,
+	}, nil
+}
+
 // Ping checks the database connection health.
 func (p *Storage) Ping() error {
 	return p.pool.Ping(context.Background())

@@ -36,6 +36,8 @@ func Router(handler *handlers.URLHandler) *chi.Mux {
 	r.Get("/{id}", handler.ExpandURL)
 	// Route to check the database connection.
 	r.Get("/ping", handler.PingDB)
+	// Route to list all URLs associated with a user.
+	r.Get("/api/internal/stats", handler.Stats)
 
 	r.Route("/debug/pprof", func(r chi.Router) {
 		r.HandleFunc("/*", pprof.Index)

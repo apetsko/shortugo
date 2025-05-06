@@ -17,11 +17,18 @@ import (
 	"github.com/apetsko/shortugo/internal/storages/shared"
 )
 
-// FilePermUserRWGroupROthersR File permissions for user read/write, group read, others read.
-const FilePermUserRWGroupROthersR = 0644
+// Storage represents a storage backed by a file.
+type Storage struct {
+	file    *os.File
+	encoder *json.Encoder
+	mu      sync.Mutex
+}
 
 // CustomBool is a custom boolean type for JSON marshaling/unmarshaling.
 type CustomBool bool
+
+// FilePermUserRWGroupROthersR File permissions for user read/write, group read, others read.
+const FilePermUserRWGroupROthersR = 0644
 
 // UnmarshalJSON unmarshals a boolean from JSON.
 func (b *CustomBool) UnmarshalJSON(data []byte) error {
@@ -44,13 +51,6 @@ func (b CustomBool) MarshalJSON() ([]byte, error) {
 		return []byte("1"), nil
 	}
 	return []byte("0"), nil
-}
-
-// Storage represents a storage backed by a file.
-type Storage struct {
-	file    *os.File
-	encoder *json.Encoder
-	mu      sync.Mutex
 }
 
 // New creates a new Storage instance with the given filename.
@@ -110,6 +110,7 @@ func (f *Storage) PutBatch(ctx context.Context, rr []models.URLRecord) (err erro
 			return fmt.Errorf("error sync file: %w", err)
 		}
 	}
+
 	return nil
 }
 
@@ -303,6 +304,43 @@ func (f *Storage) replaceFile(tmpFilename string) error {
 	f.encoder = json.NewEncoder(f.file)
 
 	return nil
+}
+
+// Stats retrieves count stats: urls and users.
+func (f *Storage) Stats(ctx context.Context) (*models.Stats, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	if _, err := f.file.Seek(0, 0); err != nil {
+		return nil, fmt.Errorf("error seeking file: %w", err)
+	}
+
+	scanner := bufio.NewScanner(f.file)
+
+	var urls int
+	users := make(map[string]struct{})
+
+	for scanner.Scan() {
+		line := scanner.Bytes()
+
+		var rec models.URLRecord
+		if err := json.Unmarshal(line, &rec); err != nil {
+			return nil, err
+		}
+
+		urls++
+		users[rec.UserID] = struct{}{}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("scanner error: %w", err)
+	}
+
+	return &models.Stats{
+		Urls:  urls,
+		Users: len(users),
+	}, nil
 }
 
 // Ping checks the storage health.
