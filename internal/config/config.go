@@ -18,6 +18,9 @@ import (
 type Config struct {
 	Config string `env:"CONFIG" envDefault:""`
 
+	// TrustedSubnet indicates trusted subnet for secure access /stats endpoint
+	TrustedSubnet string `env:"TRUSTED_SUBNET" validate:"required"`
+
 	// Host is the network address with port for the server to listen on.
 	Host string `env:"SERVER_ADDRESS" validate:"required"`
 
@@ -52,12 +55,13 @@ func New() (*Config, error) {
 	flag.BoolVar(&c.EnableHTTPS, "s", false, "enable https")
 	flag.StringVar(&c.TLSCertPath, "cert", "certs/cert.crt", "certificate filepath")
 	flag.StringVar(&c.TLSKeyPath, "key", "certs/cert.key", "private key filepath")
-	flag.StringVar(&c.Config, "config", "", "private key filepath")
+	flag.StringVar(&c.Config, "config", "", "config filepath")
 	flag.StringVar(&c.Host, "a", "localhost:8080", "network address with port")
 	flag.StringVar(&c.BaseURL, "b", "http://localhost:8080", "base url address")
 	flag.StringVar(&c.FileStoragePath, "f", "db.json", "file storages name")
 	flag.StringVar(&c.DatabaseDSN, "d", "", "database DSN")
 	flag.StringVar(&c.Secret, "secret", "fortytwo", "HMAC secret")
+	flag.StringVar(&c.TrustedSubnet, "t", "127.0.0.0/24", "trusted subnet")
 
 	// Parse config.json
 	if c.Config != "" {

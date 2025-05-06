@@ -52,7 +52,7 @@ func main() {
 		}
 	}()
 
-	handler := handlers.NewURLHandler(cfg.BaseURL, storage, logger, cfg.Secret)
+	handler := handlers.NewURLHandler(cfg.BaseURL, storage, logger, cfg.Secret, cfg.TrustedSubnet)
 
 	// Batch deletion
 	ctx, cancel := context.WithCancel(context.Background())

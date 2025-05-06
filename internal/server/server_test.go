@@ -22,7 +22,7 @@ func TestHTTPS_Starts(t *testing.T) {
 		srv := &http.Server{
 			ReadHeaderTimeout: 5 * time.Second,
 			Addr:              ":8080",
-			Handler:           Router(handlers.NewURLHandler("localhost", storage, logger, "secret")),
+			Handler:           Router(handlers.NewURLHandler("localhost", storage, logger, "secret", "")),
 		}
 		err := srv.ListenAndServeTLS("../../certs/cert.crt", "../../certs/cert.key")
 		require.NoError(t, err)
