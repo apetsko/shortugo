@@ -13,6 +13,7 @@ import (
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/reflection"
 )
 
 // Run starts a gRPC server on the address specified in cfg.GRPCHost.
@@ -47,6 +48,7 @@ func Run(cfg *config.Config, h *handlers.URLHandler, logger *logging.Logger) (*g
 	}
 
 	srv := grpc.NewServer(opts...)
+	reflection.Register(srv)
 	pb.RegisterURLShortenerServer(srv, grpch.NewHandler(h))
 
 	g, ctx := errgroup.WithContext(context.Background())

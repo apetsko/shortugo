@@ -3,6 +3,7 @@ package storages_test
 import (
 	"context"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -58,10 +59,13 @@ func TestInit_PostgresFails(t *testing.T) {
 }
 
 type mockStorage struct {
+	mu      sync.Mutex
 	Deleted [][]string
 }
 
 func (m *mockStorage) DeleteUserURLs(ctx context.Context, IDs []string, userID string) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.Deleted = append(m.Deleted, IDs)
 	return nil
 }
