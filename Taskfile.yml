@@ -1,6 +1,10 @@
 version: "3"
 
 tasks:
+  protoc:
+    desc: Generate grpc files from proto/shortugo.proto
+    cmds:
+      - protoc --go_out=. --go-grpc_out=. proto/shortugo.proto
 
   gen-certs:
     desc: Generate self-signed certs
@@ -27,11 +31,14 @@ tasks:
       - staticlint
 
   multichecker:
-    desc: Run static analysis using the custom linter
+    desc: Run static analysis using the custom linter (excluding *_test.go and *.pb.go)
     deps:
       - build-multichecker
     cmds:
-      - go vet -vettool={{.PWD}}/staticlint ./...
+      - >
+        for pkg in $(go list ./...); do
+          go vet -vettool={{.PWD}}/staticlint "$pkg";
+        done
 
 
 
@@ -51,7 +58,7 @@ tasks:
     desc: Check test coverage
     cmds:
       - go test ./... -coverprofile=./cover.tmp.out -covermode=atomic -coverpkg=./...
-      - grep -vE "/(mocks|main|noexit|multichecker)" cover.tmp.out > cover.out
+      - grep -vE "/(mocks|main|noexit|multichecker|shortugo.pb.go|shortugo_grpc.pb.go)" cover.tmp.out > cover.out
       - go-test-coverage --config=./.testcoverage.yml
       - go tool cover -html=cover.out -o coverage.html
     silent: true

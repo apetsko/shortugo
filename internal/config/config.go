@@ -24,6 +24,9 @@ type Config struct {
 	// Host is the network address with port for the server to listen on.
 	Host string `env:"SERVER_ADDRESS" validate:"required"`
 
+	// GRPCHost is the network address with port for the server to listen on.
+	GRPCHost string `env:"GRPC_SERVER_ADDRESS" validate:"required"`
+
 	// BaseURL is the base URL of the application, typically used for routing or API endpoints.
 	BaseURL string `env:"BASE_URL" validate:"required"`
 
@@ -57,12 +60,13 @@ func New() (*Config, error) {
 	flag.StringVar(&c.TLSKeyPath, "key", "certs/cert.key", "private key filepath")
 	flag.StringVar(&c.Config, "config", "", "config filepath")
 	flag.StringVar(&c.Host, "a", "localhost:8080", "network address with port")
+	flag.StringVar(&c.GRPCHost, "g", "localhost:9090", "network grpc address with port")
 	flag.StringVar(&c.BaseURL, "b", "http://localhost:8080", "base url address")
 	flag.StringVar(&c.FileStoragePath, "f", "db.json", "file storages name")
 	flag.StringVar(&c.DatabaseDSN, "d", "", "database DSN")
 	flag.StringVar(&c.Secret, "secret", "fortytwo", "HMAC secret")
 	flag.StringVar(&c.TrustedSubnet, "t", "127.0.0.0/24", "trusted subnet")
-
+	fmt.Println("1 ", c.TrustedSubnet)
 	// Parse config.json
 	if c.Config != "" {
 		if err := LoadJSONConfig(c.Config, &c); err != nil {
@@ -82,6 +86,7 @@ func New() (*Config, error) {
 	if err := utils.ValidateStruct(c); err != nil {
 		return nil, err
 	}
+	fmt.Println("2 ", c.TrustedSubnet)
 
 	// Return the populated and validated Config
 	return &c, nil

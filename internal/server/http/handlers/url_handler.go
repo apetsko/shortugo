@@ -44,7 +44,7 @@ type URLHandler struct {
 func NewURLHandler(baseURL string, s Storage, l *logging.Logger, secret, trustedSubnet string) *URLHandler {
 	_, network, err := net.ParseCIDR(trustedSubnet)
 	if err != nil {
-		l.Error("Invalid trusted subnet")
+		l.Error("Invalid trusted subnet: " + trustedSubnet)
 		network = nil
 	}
 	return &URLHandler{

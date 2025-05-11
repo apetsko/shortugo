@@ -77,7 +77,7 @@ func TestParse(t *testing.T) {
 	}{
 		{
 			name:    "OK",
-			wantC:   &Config{EnableHTTPS: false, TLSCertPath: "certs/cert.crt", TLSKeyPath: "certs/cert.key", Config: "", Host: "localhost:8080", BaseURL: "http://localhost:8080", FileStoragePath: "db.json", DatabaseDSN: "", Secret: "fortytwo", TrustedSubnet: "127.0.0.0/24"},
+			wantC:   &Config{EnableHTTPS: false, TLSCertPath: "certs/cert.crt", TLSKeyPath: "certs/cert.key", Config: "", Host: "localhost:8080", GRPCHost: "localhost:9090", BaseURL: "http://localhost:8080", FileStoragePath: "db.json", DatabaseDSN: "", Secret: "fortytwo", TrustedSubnet: "127.0.0.0/24"},
 			wantErr: false,
 		},
 	}

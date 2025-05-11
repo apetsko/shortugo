@@ -14,7 +14,10 @@ require (
 	github.com/gorilla/securecookie v1.1.2
 	github.com/kisielk/errcheck v1.9.0
 	github.com/pressly/goose/v3 v3.24.1
+	golang.org/x/sync v0.13.0
 	golang.org/x/tools v0.32.0
+	google.golang.org/grpc v1.65.0
+	google.golang.org/protobuf v1.36.6
 	honnef.co/go/tools v0.6.1
 )
 
@@ -23,6 +26,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/gostaticanalysis/analysisutil v0.7.1 // indirect
 	github.com/gostaticanalysis/comment v1.4.2 // indirect
@@ -40,9 +44,10 @@ require (
 	golang.org/x/exp/typeparams v0.0.0-20231108232855-2478ac86f678 // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/sync v0.13.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240604185151-ef581f913117 // indirect
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.5.1 // indirect
 )
 
 require (

@@ -1,11 +1,11 @@
-package server
+package http
 
 import (
 	"expvar"
 	"net/http/pprof"
 
-	"github.com/apetsko/shortugo/internal/handlers"
 	mw "github.com/apetsko/shortugo/internal/middleware"
+	"github.com/apetsko/shortugo/internal/server/http/handlers"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )

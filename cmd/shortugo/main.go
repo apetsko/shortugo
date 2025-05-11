@@ -6,12 +6,12 @@ import (
 	"log"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/apetsko/shortugo/internal/config"
-	"github.com/apetsko/shortugo/internal/handlers"
 	"github.com/apetsko/shortugo/internal/logging"
-	"github.com/apetsko/shortugo/internal/server"
+	"github.com/apetsko/shortugo/internal/server/grpc"
+	"github.com/apetsko/shortugo/internal/server/http"
+	"github.com/apetsko/shortugo/internal/server/http/handlers"
 	"github.com/apetsko/shortugo/internal/storages"
 	"go.uber.org/zap/zapcore"
 )
@@ -59,10 +59,14 @@ func main() {
 	defer cancel()
 	go storages.StartBatchDeleteProcessor(ctx, storage, handler.ToDelete, logger)
 
-	// Start server
-	srv, err := server.Run(cfg, handler, logger)
-	if err != nil {
-		logger.Fatal("Server failed: " + err.Error())
+	// Start HTTP server
+	if _, err := http.Run(cfg, handler, logger); err != nil {
+		logger.Fatal("HTTP server failed: " + err.Error())
+	}
+
+	// Start gRPC server
+	if _, err := grpc.Run(cfg, handler, logger); err != nil {
+		logger.Fatal("gRPC server failed: " + err.Error())
 	}
 
 	// Graceful shutdown
@@ -70,15 +74,5 @@ func main() {
 	defer stop()
 
 	<-ctx.Done()
-	logger.Info("Shutting down server...")
-
-	timeout := 5 * time.Second
-	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), timeout)
-	defer shutdownCancel()
-
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		logger.Fatal("Graceful shutdown failed: " + err.Error())
-	}
-
-	logger.Info("Server gracefully stopped")
+	logger.Info("Shutting down servers...")
 }
