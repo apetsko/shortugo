@@ -59,8 +59,8 @@ func TestInit_PostgresFails(t *testing.T) {
 }
 
 type mockStorage struct {
-	mu      sync.Mutex
 	Deleted [][]string
+	mu      sync.Mutex
 }
 
 func (m *mockStorage) DeleteUserURLs(ctx context.Context, IDs []string, userID string) error {
