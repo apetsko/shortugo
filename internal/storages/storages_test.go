@@ -70,6 +70,12 @@ func (m *mockStorage) DeleteUserURLs(ctx context.Context, IDs []string, userID s
 	return nil
 }
 
+func (m *mockStorage) GetDeleted() [][]string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([][]string(nil), m.Deleted...) // скопируем для безопасности
+}
+
 func TestStartBatchDeleteProcessor_ImmediateFlushOnLimit(t *testing.T) {
 	logger := setupLogger(t)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -91,7 +97,7 @@ func TestStartBatchDeleteProcessor_ImmediateFlushOnLimit(t *testing.T) {
 	time.Sleep(3 * time.Second)
 	cancel()
 
-	require.GreaterOrEqual(t, len(mock.Deleted), 1)
+	require.GreaterOrEqual(t, len(mock.GetDeleted()), 1)
 }
 
 func TestStartBatchDeleteProcessor_GracefulShutdown(t *testing.T) {
@@ -112,6 +118,6 @@ func TestStartBatchDeleteProcessor_GracefulShutdown(t *testing.T) {
 	cancel()
 	time.Sleep(500 * time.Millisecond)
 
-	require.Len(t, mock.Deleted, 1)
-	assert.ElementsMatch(t, []string{"x1", "x2"}, mock.Deleted[0])
+	require.Len(t, mock.GetDeleted(), 1)
+	assert.ElementsMatch(t, []string{"x1", "x2"}, mock.GetDeleted()[0])
 }
