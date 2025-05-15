@@ -18,6 +18,14 @@ import (
 )
 
 func TestShortenBatch_GRPC(t *testing.T) {
+	userID := "user123"
+	empty := ""
+	one := "1"
+	two := "2"
+	example := "http://example.com"
+	test := "http://test.com"
+	badreq := "Bad Request: Empty URL"
+
 	logger, _ := logging.New(zapcore.DebugLevel)
 
 	tests := []struct {
@@ -35,10 +43,10 @@ func TestShortenBatch_GRPC(t *testing.T) {
 				s.On("PutBatch", mock.Anything, mock.Anything).Return(nil)
 			},
 			request: &pb.ShortenBatchRequest{
-				UserId: "user123",
+				UserId: &userID,
 				Urls: []*pb.URLPair{
-					{CorrelationId: "1", OriginalUrl: "http://example.com"},
-					{CorrelationId: "2", OriginalUrl: "http://test.com"},
+					{CorrelationId: &one, OriginalUrl: &example},
+					{CorrelationId: &two, OriginalUrl: &test},
 				},
 			},
 			expectedStatus: codes.OK,
@@ -51,15 +59,15 @@ func TestShortenBatch_GRPC(t *testing.T) {
 				s.On("PutBatch", mock.Anything, mock.Anything).Return(nil)
 			},
 			request: &pb.ShortenBatchRequest{
-				UserId: "user123",
+				UserId: &userID,
 				Urls: []*pb.URLPair{
-					{CorrelationId: "1", OriginalUrl: ""},
+					{CorrelationId: &one, OriginalUrl: &empty},
 				},
 			},
 			expectedStatus: codes.OK,
 			expectedBody: &pb.ShortenBatchResponse{
 				Results: []*pb.URLPair{
-					{CorrelationId: "1", ShortUrl: "Bad Request: Empty URL"},
+					{CorrelationId: &one, ShortUrl: &badreq},
 				},
 			},
 		},
@@ -70,9 +78,9 @@ func TestShortenBatch_GRPC(t *testing.T) {
 				s.On("PutBatch", mock.Anything, mock.Anything).Return(errors.New("fail"))
 			},
 			request: &pb.ShortenBatchRequest{
-				UserId: "user123",
+				UserId: &userID,
 				Urls: []*pb.URLPair{
-					{CorrelationId: "1", OriginalUrl: "http://example.com"},
+					{CorrelationId: &one, OriginalUrl: &example},
 				},
 			},
 			expectedStatus: codes.Internal,
@@ -83,9 +91,9 @@ func TestShortenBatch_GRPC(t *testing.T) {
 			userID:           "",
 			mockStorageSetup: func(s *mocks.Storage) {},
 			request: &pb.ShortenBatchRequest{
-				UserId: "",
+				UserId: &empty,
 				Urls: []*pb.URLPair{
-					{CorrelationId: "1", OriginalUrl: "http://example.com"},
+					{CorrelationId: &one, OriginalUrl: &example},
 				},
 			},
 			expectedStatus: codes.InvalidArgument,

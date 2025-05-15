@@ -66,7 +66,7 @@ func New() (*Config, error) {
 	flag.StringVar(&c.DatabaseDSN, "d", "", "database DSN")
 	flag.StringVar(&c.Secret, "secret", "fortytwo", "HMAC secret")
 	flag.StringVar(&c.TrustedSubnet, "t", "127.0.0.0/24", "trusted subnet")
-	fmt.Println("1 ", c.TrustedSubnet)
+
 	// Parse config.json
 	if c.Config != "" {
 		if err := LoadJSONConfig(c.Config, &c); err != nil {

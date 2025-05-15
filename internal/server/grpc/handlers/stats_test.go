@@ -22,7 +22,8 @@ import (
 
 func TestStats_GRPC(t *testing.T) {
 	_, trustedNet, _ := net.ParseCIDR("192.168.0.0/24")
-
+	ten := int64(10)
+	five := int64(5)
 	tests := []struct {
 		trustedSubnet    *net.IPNet
 		mockStats        *models.Stats
@@ -39,8 +40,8 @@ func TestStats_GRPC(t *testing.T) {
 			mockStats:     &models.Stats{Urls: 10, Users: 5},
 			expectedCode:  codes.OK,
 			expectedResponse: &pb.StatsResponse{
-				UrlCount:  10,
-				UserCount: 5,
+				UrlCount:  &ten,
+				UserCount: &five,
 			},
 		},
 		{
@@ -92,7 +93,7 @@ func TestStats_GRPC(t *testing.T) {
 
 			client := pb.NewURLShortenerClient(conn)
 
-			resp, err := client.Stats(context.Background(), &pb.StatsRequest{Ip: tt.ip})
+			resp, err := client.Stats(context.Background(), &pb.StatsRequest{Ip: &tt.ip})
 
 			if tt.expectedCode == codes.OK {
 				require.NoError(t, err)

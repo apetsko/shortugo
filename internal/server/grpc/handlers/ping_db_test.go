@@ -18,6 +18,7 @@ import (
 )
 
 func TestPingDB_GRPC(t *testing.T) {
+	statusOK := "OK"
 	tests := []struct {
 		mockSetup    func(mockStorage *mocks.Storage)
 		expectedBody *pb.PingResponse
@@ -30,7 +31,7 @@ func TestPingDB_GRPC(t *testing.T) {
 				mockStorage.On("Ping").Return(nil)
 			},
 			expectedCode: codes.OK,
-			expectedBody: &pb.PingResponse{Status: "OK"},
+			expectedBody: &pb.PingResponse{Status: &statusOK},
 		},
 		{
 			name: "database is unreachable",

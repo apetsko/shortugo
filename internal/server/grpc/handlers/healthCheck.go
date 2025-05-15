@@ -11,5 +11,6 @@ import (
 //
 // This method corresponds to a simple HTTP healthcheck endpoint.
 func (h *Handler) HealthCheck(ctx context.Context, req *pb.HealthCheckRequest) (*pb.HealthCheckResponse, error) {
-	return &pb.HealthCheckResponse{Status: "OK"}, nil
+	status := "Ok"
+	return &pb.HealthCheckResponse{Status: &status}, nil
 }

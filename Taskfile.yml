@@ -31,13 +31,17 @@ tasks:
       - staticlint
 
   multichecker:
-    desc: Run static analysis using the custom linter (excluding *_test.go and *.pb.go)
+    desc: Run static analysis using the custom linter (excluding mocks, main, noexit, multichecker, proto)
     deps:
       - build-multichecker
     cmds:
       - >
         for pkg in $(go list ./...); do
-          go vet -vettool={{.PWD}}/staticlint "$pkg";
+          if [[ "$pkg" =~ mocks|main|noexit|multichecker|proto ]]; then
+            echo "Skipping $pkg"
+            continue
+          fi
+          go vet -vettool=$(pwd)/staticlint "$pkg"
         done
 
 

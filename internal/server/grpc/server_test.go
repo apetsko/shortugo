@@ -53,7 +53,7 @@ func TestGRPCServer_Starts(t *testing.T) {
 
 	resp, err := client.Ping(ctx, &pb.PingRequest{})
 	require.NoError(t, err)
-	assert.Equal(t, "OK", resp.Status)
+	assert.Equal(t, "OK", resp.GetStatus())
 
 	srv.GracefulStop()
 }

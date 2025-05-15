@@ -20,11 +20,12 @@ import (
 )
 
 func TestShorten_GRPC(t *testing.T) {
-	const (
-		baseURL = "http://short.ly"
-		url     = "http://example.com"
-	)
-	id := utils.GenerateID(url, 8)
+	baseURL := "http://short.ly"
+	userID := "user123"
+	empty := ""
+	example := "http://example.com"
+
+	id := utils.GenerateID(example, 8)
 	shortURL := baseURL + "/" + id
 
 	tests := []struct {
@@ -43,8 +44,8 @@ func TestShorten_GRPC(t *testing.T) {
 				s.On("Put", mock.Anything, mock.Anything).Return(nil)
 			},
 			req: &pb.ShortenRequest{
-				UserId:      "user123",
-				OriginalUrl: url,
+				UserId:      &userID,
+				OriginalUrl: &example,
 			},
 			expectedCode:  codes.OK,
 			expectedShort: shortURL,
@@ -53,11 +54,11 @@ func TestShorten_GRPC(t *testing.T) {
 			name:   "duplicate URL",
 			userID: "user123",
 			mockStorageSetup: func(s *mocks.Storage) {
-				s.On("Get", mock.Anything, id).Return(url, nil)
+				s.On("Get", mock.Anything, id).Return(example, nil)
 			},
 			req: &pb.ShortenRequest{
-				UserId:      "user123",
-				OriginalUrl: url,
+				UserId:      &userID,
+				OriginalUrl: &example,
 			},
 			expectedCode:  codes.AlreadyExists,
 			expectedShort: shortURL,
@@ -67,8 +68,8 @@ func TestShorten_GRPC(t *testing.T) {
 			userID:           "",
 			mockStorageSetup: func(s *mocks.Storage) {},
 			req: &pb.ShortenRequest{
-				UserId:      "",
-				OriginalUrl: url,
+				UserId:      &empty,
+				OriginalUrl: &example,
 			},
 			expectedCode: codes.InvalidArgument,
 		},
@@ -77,8 +78,8 @@ func TestShorten_GRPC(t *testing.T) {
 			userID:           "user123",
 			mockStorageSetup: func(s *mocks.Storage) {},
 			req: &pb.ShortenRequest{
-				UserId:      "user123",
-				OriginalUrl: "",
+				UserId:      &userID,
+				OriginalUrl: &empty,
 			},
 			expectedCode: codes.InvalidArgument,
 		},
@@ -89,8 +90,8 @@ func TestShorten_GRPC(t *testing.T) {
 				s.On("Get", mock.Anything, id).Return("", errors.New("fail"))
 			},
 			req: &pb.ShortenRequest{
-				UserId:      "user123",
-				OriginalUrl: url,
+				UserId:      &userID,
+				OriginalUrl: &example,
 			},
 			expectedCode: codes.Internal,
 		},
@@ -102,8 +103,8 @@ func TestShorten_GRPC(t *testing.T) {
 				s.On("Put", mock.Anything, mock.Anything).Return(errors.New("fail"))
 			},
 			req: &pb.ShortenRequest{
-				UserId:      "user123",
-				OriginalUrl: url,
+				UserId:      &userID,
+				OriginalUrl: &example,
 			},
 			expectedCode: codes.Internal,
 		},
@@ -133,7 +134,7 @@ func TestShorten_GRPC(t *testing.T) {
 
 			if tt.expectedCode == codes.OK {
 				require.NoError(t, err)
-				assert.Equal(t, tt.expectedShort, resp.ShortUrl)
+				assert.Equal(t, tt.expectedShort, resp.GetShortUrl())
 			} else {
 				require.Error(t, err)
 				st, ok := status.FromError(err)

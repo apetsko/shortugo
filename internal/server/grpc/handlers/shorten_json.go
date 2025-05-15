@@ -15,25 +15,27 @@ import (
 // ShortenJSON creates a short URL from a single original URL.
 // If the URL is already stored, it returns Conflict. Otherwise, it stores and returns the new short URL.
 func (h *Handler) ShortenJSON(ctx context.Context, req *pb.ShortenRequest) (*pb.ShortenResponse, error) {
-	if req.UserId == "" {
+	if req.GetUserId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "user_id is required")
 	}
-	if req.OriginalUrl == "" {
+	if req.GetOriginalUrl() == "" {
 		return nil, status.Error(codes.InvalidArgument, "original_url is required")
 	}
 	idLen := 8
-	id := utils.GenerateID(req.OriginalUrl, idLen)
+	id := utils.GenerateID(req.GetOriginalUrl(), idLen)
+	shortURL := h.URLHandler.BaseURL + "/" + id
+
 	record := models.URLRecord{
 		ID:     id,
-		URL:    req.OriginalUrl,
-		UserID: req.UserId,
+		URL:    req.GetOriginalUrl(),
+		UserID: req.GetUserId(),
 	}
 
 	// Check if it already exists
 	existing, err := h.URLHandler.Storage.Get(ctx, id)
 	if err == nil && existing != "" {
 		return &pb.ShortenResponse{
-			ShortUrl: h.URLHandler.BaseURL + "/" + id,
+			ShortUrl: &shortURL,
 		}, status.Error(codes.AlreadyExists, "URL already exists")
 	}
 
@@ -49,6 +51,6 @@ func (h *Handler) ShortenJSON(ctx context.Context, req *pb.ShortenRequest) (*pb.
 	}
 
 	return &pb.ShortenResponse{
-		ShortUrl: h.URLHandler.BaseURL + "/" + id,
+		ShortUrl: &shortURL,
 	}, nil
 }

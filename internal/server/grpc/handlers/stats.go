@@ -31,7 +31,7 @@ func (h *Handler) Stats(ctx context.Context, req *pb.StatsRequest) (*pb.StatsRes
 		return nil, status.Error(codes.PermissionDenied, "trusted subnet required")
 	}
 
-	ip := net.ParseIP(strings.TrimSpace(req.Ip))
+	ip := net.ParseIP(strings.TrimSpace(req.GetIp()))
 	if ip == nil {
 		h.URLHandler.Logger.Error("Forbidden: Invalid IP in request")
 		return nil, status.Error(codes.PermissionDenied, "invalid IP")
@@ -47,9 +47,10 @@ func (h *Handler) Stats(ctx context.Context, req *pb.StatsRequest) (*pb.StatsRes
 		h.URLHandler.Logger.Error("Failed to retrieve stats: " + err.Error())
 		return nil, status.Error(codes.Internal, "failed to retrieve stats")
 	}
-
+	urlcount := int64(stats.Urls)
+	usercount := int64(stats.Users)
 	return &pb.StatsResponse{
-		UrlCount:  uint64(stats.Urls),
-		UserCount: uint64(stats.Users),
+		UrlCount:  &urlcount,
+		UserCount: &usercount,
 	}, nil
 }

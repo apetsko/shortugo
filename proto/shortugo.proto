@@ -1,6 +1,9 @@
-syntax = "proto3";
+edition = "2023";
 
 package shortugo;
+
+import "google/protobuf/go_features.proto";
+option features.(pb.go).api_level = API_HYBRID;
 
 option go_package = "/proto;proto";
 

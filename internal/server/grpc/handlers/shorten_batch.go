@@ -13,7 +13,7 @@ import (
 // ShortenBatch handles batch URL shortening requests.
 // It validates and stores each original URL, and returns their shortened versions with correlation IDs.
 func (h *Handler) ShortenBatch(ctx context.Context, req *pb.ShortenBatchRequest) (*pb.ShortenBatchResponse, error) {
-	if req.UserId == "" {
+	if req.GetUserId() == "" {
 		return nil, status.Error(codes.InvalidArgument, "user_id is required")
 	}
 
@@ -21,26 +21,28 @@ func (h *Handler) ShortenBatch(ctx context.Context, req *pb.ShortenBatchRequest)
 	var results []*pb.URLPair
 
 	for _, item := range req.Urls {
-		if item.OriginalUrl == "" {
+		if item.GetOriginalUrl() == "" {
+			badreq := "Bad Request: Empty URL"
 			results = append(results, &pb.URLPair{
 				CorrelationId: item.CorrelationId,
-				ShortUrl:      "Bad Request: Empty URL",
+				ShortUrl:      &badreq,
 			})
 			continue
 		}
 		idLen := 8
-		id := utils.GenerateID(item.OriginalUrl, idLen)
+		id := utils.GenerateID(item.GetOriginalUrl(), idLen)
 
 		record := models.URLRecord{
-			URL:    item.OriginalUrl,
+			URL:    item.GetOriginalUrl(),
 			ID:     id,
-			UserID: req.UserId,
+			UserID: req.GetUserId(),
 		}
 		records = append(records, record)
 
+		shortURL := h.URLHandler.BaseURL + "/" + id
 		results = append(results, &pb.URLPair{
 			CorrelationId: item.CorrelationId,
-			ShortUrl:      h.URLHandler.BaseURL + "/" + id,
+			ShortUrl:      &shortURL,
 			OriginalUrl:   item.OriginalUrl, // optionally for debug
 		})
 	}

@@ -22,9 +22,9 @@ func (h *Handler) DeleteUserURLs(ctx context.Context, req *pb.DeleteUserURLsRequ
 	go func() {
 		h.URLHandler.ToDelete <- models.BatchDeleteRequest{
 			Ids:    req.ShortUrlIds,
-			UserID: req.UserId,
+			UserID: *req.UserId,
 		}
 	}()
-
-	return &pb.DeleteUserURLsResponse{Success: true}, nil
+	success := true
+	return &pb.DeleteUserURLsResponse{Success: &success}, nil
 }

@@ -34,14 +34,15 @@ func TestDeleteUserURLs_GRPC(t *testing.T) {
 
 	client := pb.NewURLShortenerClient(conn)
 
+	testUser := "test-user"
 	req := &pb.DeleteUserURLsRequest{
-		UserId:      "test-user",
+		UserId:      &testUser,
 		ShortUrlIds: []string{"id1", "id2"},
 	}
 
 	resp, err := client.DeleteUserURLs(ctx, req)
 	assert.NoError(t, err)
-	assert.True(t, resp.Success)
+	assert.True(t, resp.GetSuccess())
 
 	select {
 	case msg := <-toDelete:

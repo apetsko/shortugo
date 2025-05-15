@@ -17,5 +17,5 @@ func TestHandler_HealthCheck(t *testing.T) {
 
 	require.NoError(t, err)
 	require.NotNil(t, resp)
-	assert.Equal(t, "OK", resp.Status)
+	assert.Equal(t, "Ok", resp.GetStatus())
 }

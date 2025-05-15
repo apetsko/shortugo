@@ -22,6 +22,11 @@ import (
 
 func TestListUserURLs_GRPC(t *testing.T) {
 	logger, _ := logging.New(zapcore.DebugLevel)
+	short1 := "short1"
+	url1 := "http://example.com"
+	short2 := "short2"
+	url2 := "http://test.com"
+	empty := ""
 
 	tests := []struct {
 		mockStorageSetup func(mockStorage *mocks.Storage)
@@ -61,10 +66,12 @@ func TestListUserURLs_GRPC(t *testing.T) {
 					}, nil)
 			},
 			expectedStatus: codes.OK,
+
 			expectedBody: &pb.ListUserURLsResponse{
+
 				Urls: []*pb.URLPair{
-					{ShortUrl: "short1", OriginalUrl: "http://example.com"},
-					{ShortUrl: "short2", OriginalUrl: "http://test.com"},
+					{ShortUrl: &short1, OriginalUrl: &url1, CorrelationId: &empty},
+					{ShortUrl: &short2, OriginalUrl: &url2, CorrelationId: &empty},
 				},
 			},
 		},
@@ -93,7 +100,7 @@ func TestListUserURLs_GRPC(t *testing.T) {
 			client := pb.NewURLShortenerClient(conn)
 
 			resp, err := client.ListUserURLs(ctx, &pb.ListUserURLsRequest{
-				UserId: tt.reqUserID,
+				UserId: &tt.reqUserID,
 			})
 
 			if tt.expectedStatus == codes.OK {

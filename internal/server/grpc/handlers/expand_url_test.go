@@ -93,11 +93,11 @@ func TestExpand_GRPC(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockStorage.On("Get", mock.Anything, tt.id).Return(tt.mockReturn, tt.mockError)
 
-			resp, err := client.Expand(ctx, &pb.ExpandRequest{ShortUrlId: tt.id})
+			resp, err := client.Expand(ctx, &pb.ExpandRequest{ShortUrlId: &tt.id})
 
 			if tt.mockError == nil {
 				require.NoError(t, err)
-				assert.Equal(t, tt.mockReturn, resp.OriginalUrl)
+				assert.Equal(t, tt.mockReturn, resp.GetOriginalUrl())
 			} else {
 				require.Nil(t, resp)
 				tt.assertErr(t, err)

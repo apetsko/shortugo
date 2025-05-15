@@ -25,6 +25,10 @@ import (
 )
 
 func TestGRPC_E2E(t *testing.T) {
+	testIP := "127.0.0.1"
+	testUser := "test-user"
+	one := "1"
+
 	mockStorage := new(mocks.Storage)
 	logger, _ := logging.New(zapcore.DebugLevel)
 	toDelete := make(chan models.BatchDeleteRequest, 1)
@@ -64,7 +68,7 @@ func TestGRPC_E2E(t *testing.T) {
 	// Step 1: Ping
 	resp, err := client.Ping(ctx, &pb.PingRequest{})
 	require.NoError(t, err)
-	assert.Equal(t, "OK", resp.Status)
+	assert.Equal(t, "OK", resp.GetStatus())
 
 	// Step 2: Shorten
 	uniqueURL := fmt.Sprintf("http://example.com/e2e-%d", time.Now().UnixNano())
@@ -75,50 +79,50 @@ func TestGRPC_E2E(t *testing.T) {
 	mockStorage.On("Put", mock.Anything, mock.Anything).Return(nil).Once()
 
 	shortenResp, err := client.Shorten(ctx, &pb.ShortenRequest{
-		OriginalUrl: uniqueURL,
-		UserId:      "test-user",
+		OriginalUrl: &uniqueURL,
+		UserId:      &testUser,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "http://short.ly/"+shortenedID, shortenResp.ShortUrl)
+	assert.Equal(t, "http://short.ly/"+shortenedID, shortenResp.GetShortUrl())
 
 	// Step 3: Expand — Get returns actual URL
 	mockStorage.On("Get", mock.Anything, shortenedID).Return(uniqueURL, nil).Once()
 
 	expandResp, err := client.Expand(ctx, &pb.ExpandRequest{
-		ShortUrlId: shortenedID,
+		ShortUrlId: &shortenedID,
 	})
 	require.NoError(t, err)
-	assert.Equal(t, uniqueURL, expandResp.OriginalUrl)
+	assert.Equal(t, uniqueURL, expandResp.GetOriginalUrl())
 
 	// Step 4: ShortenBatch
 	batchURL := fmt.Sprintf("http://example.com/batch-%d", time.Now().UnixNano())
 
 	batchResp, err := client.ShortenBatch(ctx, &pb.ShortenBatchRequest{
-		UserId: "test-user",
+		UserId: &testUser,
 		Urls: []*pb.URLPair{
-			{CorrelationId: "1", OriginalUrl: batchURL},
+			{CorrelationId: &one, OriginalUrl: &batchURL},
 		},
 	})
 	require.NoError(t, err)
-	require.Len(t, batchResp.Results, 1)
-	assert.Equal(t, "1", batchResp.Results[0].CorrelationId)
-	assert.Contains(t, batchResp.Results[0].ShortUrl, "http://short.ly/")
+	require.Len(t, batchResp.GetResults(), 1)
+	assert.Equal(t, "1", batchResp.GetResults()[0].GetCorrelationId())
+	assert.Contains(t, batchResp.GetResults()[0].GetShortUrl(), "http://short.ly/")
 
 	// Step 5: ListUserURLs
 	listResp, err := client.ListUserURLs(ctx, &pb.ListUserURLsRequest{
-		UserId: "test-user",
+		UserId: &testUser,
 	})
 	require.NoError(t, err)
 	require.Len(t, listResp.Urls, 1)
-	assert.Equal(t, "abc123", listResp.Urls[0].ShortUrl)
+	assert.Equal(t, "abc123", listResp.GetUrls()[0].GetShortUrl())
 
 	// Step 6: DeleteUserURLs
 	delResp, err := client.DeleteUserURLs(ctx, &pb.DeleteUserURLsRequest{
-		UserId:      "test-user",
+		UserId:      &testUser,
 		ShortUrlIds: []string{"abc123"},
 	})
 	require.NoError(t, err)
-	assert.True(t, delResp.Success)
+	assert.True(t, delResp.GetSuccess())
 
 	go func() {
 		select {
@@ -130,10 +134,10 @@ func TestGRPC_E2E(t *testing.T) {
 	}()
 
 	// Step 7: Stats
-	statsResp, err := client.Stats(ctx, &pb.StatsRequest{Ip: "127.0.0.1"})
+	statsResp, err := client.Stats(ctx, &pb.StatsRequest{Ip: &testIP})
 	require.NoError(t, err)
-	assert.Equal(t, uint64(2), statsResp.UrlCount)
-	assert.Equal(t, uint64(1), statsResp.UserCount)
+	assert.Equal(t, int64(2), statsResp.GetUrlCount())
+	assert.Equal(t, int64(1), statsResp.GetUserCount())
 
 	mockStorage.AssertExpectations(t)
 }
