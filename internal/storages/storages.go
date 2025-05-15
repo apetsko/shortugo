@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apetsko/shortugo/internal/handlers"
 	"github.com/apetsko/shortugo/internal/logging"
 	"github.com/apetsko/shortugo/internal/models"
+	"github.com/apetsko/shortugo/internal/server/http/handlers"
 	"github.com/apetsko/shortugo/internal/storages/infile"
 	"github.com/apetsko/shortugo/internal/storages/inmem"
 	"github.com/apetsko/shortugo/internal/storages/postgres"

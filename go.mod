@@ -9,12 +9,15 @@ require github.com/stretchr/testify v1.10.0
 require (
 	github.com/400f/sqlpassctxcheck v0.2.1
 	github.com/caarlos0/env/v11 v11.3.1
-	github.com/go-playground/assert/v2 v2.2.0
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/gorilla/securecookie v1.1.2
+	github.com/grpc-ecosystem/go-grpc-middleware/v2 v2.3.2
 	github.com/kisielk/errcheck v1.9.0
 	github.com/pressly/goose/v3 v3.24.1
+	golang.org/x/sync v0.13.0
 	golang.org/x/tools v0.32.0
+	google.golang.org/grpc v1.67.1
+	google.golang.org/protobuf v1.36.6
 	honnef.co/go/tools v0.6.1
 )
 
@@ -40,9 +43,9 @@ require (
 	golang.org/x/exp/typeparams v0.0.0-20231108232855-2478ac86f678 // indirect
 	golang.org/x/mod v0.24.0 // indirect
 	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/sync v0.13.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240826202546-f6391c0de4c7 // indirect
 )
 
 require (

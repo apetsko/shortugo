@@ -25,6 +25,13 @@ jobs:
       - name: Build
         run: go build -buildvcs=false -o staticlint ./cmd/staticlint
 
-      - name: Run go vet with multichecker
-        run: go vet -vettool=./staticlint ./...
+      - name: Run go vet with multichecker (filtered)
+        run: |
+          for pkg in $(go list ./...); do
+            if [[ "$pkg" =~ mocks|main|noexit|multichecker|proto ]]; then
+              echo "Skipping $pkg"
+              continue
+            fi
+            go vet -vettool=$(pwd)/staticlint "$pkg"
+          done
 

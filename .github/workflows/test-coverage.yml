@@ -31,7 +31,7 @@ jobs:
       - name: Run go tests
         run: |
           go test ./... -coverprofile=./cover.tmp.out -covermode=atomic -coverpkg=./...
-          grep -vE "/(mocks|main|noexit|multichecker)" cover.tmp.out > cover.out
+          grep -vE "/(mocks|main|noexit|multichecker|shortugo.pb.go|shortugo_grpc.pb.go)" cover.tmp.out > cover.out
 
       - name: Show coverage summary 
         run: go tool cover -func=cover.out

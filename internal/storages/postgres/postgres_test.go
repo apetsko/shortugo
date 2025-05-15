@@ -2,7 +2,6 @@ package postgres
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/exec"
 	"testing"
@@ -19,7 +18,7 @@ import (
 const (
 	localContainerName = "test_postgres_container"
 	localConnString    = "postgres://testuser:testpass@localhost:54321/testdb?sslmode=disable"
-	ciConnString       = "postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable" // Used in CI environment
+	ciConnString       = "postgres://postgres:postgres@postgres:5432/praktikum?sslmode=disable"
 )
 
 var (
@@ -28,8 +27,6 @@ var (
 	isCI      = os.Getenv("CI") == "true"
 )
 
-// startTestDB starts a PostgreSQL database in a Docker container for local testing.
-// If running in a CI environment, it uses the pre-configured CI connection string.
 func startTestDB() {
 	if isCI {
 		connStr = ciConnString
@@ -47,47 +44,29 @@ func startTestDB() {
 		"-e", "POSTGRES_PASSWORD=testpass",
 		"-p", "54321:5432",
 		"postgres:17")
-
-	if err := cmd.Run(); err != nil {
-		fmt.Printf("❌ Failed to start PostgreSQL: %v\n", err)
-		os.Exit(1)
-	}
-
+	require.NoError(nil, cmd.Run())
 	waitForTestDB()
 }
 
-// stopTestDB stops the Docker container running the test database.
-// This is only executed in a local environment, not in CI.
 func stopTestDB() {
-	if isCI {
-		return
+	if !isCI {
+		logger.Info("🛑 Stopping local test database...")
+		_ = exec.Command("docker", "stop", localContainerName).Run()
 	}
-
-	logger.Info("🛑 Stopping local test database...")
-	cmd := exec.Command("docker", "stop", localContainerName)
-	_ = cmd.Run() // Ignore errors as the container might not exist
 }
 
-// waitForTestDB waits for the PostgreSQL database to become ready.
-// It retries the connection until a timeout is reached.
 func waitForTestDB() {
-	logger.Info("⏳ Waiting for PostgreSQL to become ready...")
-
 	timeout := time.After(30 * time.Second)
 	tick := time.Tick(1 * time.Second)
-
 	for {
 		select {
 		case <-timeout:
-			logger.Info("❌ Timeout while waiting for PostgreSQL")
+			logger.Error("❌ Timeout while waiting for PostgreSQL")
 			os.Exit(1)
 		case <-tick:
 			storage, err := New(connStr, logger)
 			if err == nil {
-				if closeErr := storage.Close(); closeErr != nil {
-					logger.Errorf("Failed to create & close PostgreSQL storage: %s. %s", closeErr, err)
-					return
-				}
+				_ = storage.Close()
 				logger.Info("✅ PostgreSQL is ready")
 				return
 			}
@@ -95,102 +74,139 @@ func waitForTestDB() {
 	}
 }
 
-// setupTestStorage creates a new Storage instance for testing.
-// It ensures the storage is properly closed after the test.
 func setupTestStorage(t *testing.T) *Storage {
-	logger.Info(fmt.Sprintf("LOG setupTestStorage: connecting to %q", connStr))
 	storage, err := New(connStr, logger)
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = storage.Close() })
 	return storage
 }
 
-// TestMain manages the lifecycle of tests.
-// It starts the test database if running locally and stops it after tests are completed.
 func TestMain(m *testing.M) {
-	isCI := os.Getenv("CI") == "true"
-	logger.Infof("CI.env in test: %q", os.Getenv("CI"))
-
 	if isCI {
 		connStr = ciConnString
-		logger.Info("🔄 Running in CI. Using CI Postgres container...", "connStr", connStr)
 	} else {
 		connStr = localConnString
-		logger.Info("🔄 Starting local test DB...", "connStr", connStr)
 		startTestDB()
 		time.Sleep(5 * time.Second)
 	}
-
-	exitCode := m.Run()
-
-	if !isCI {
-		stopTestDB()
-	}
-
-	os.Exit(exitCode)
+	code := m.Run()
+	stopTestDB()
+	os.Exit(code)
 }
 
-// TestStorage_PutGet tests the Put and Get methods of the Storage.
-// It verifies that a URLRecord can be stored and retrieved successfully.
 func TestStorage_PutGet(t *testing.T) {
 	storage := setupTestStorage(t)
 	ctx := context.Background()
 
-	record := models.URLRecord{
-		ID:     "test-id",
-		URL:    "https://example.com",
-		UserID: "user-123",
-	}
+	rec := models.URLRecord{ID: "id-get", URL: "https://example.com", UserID: "user1"}
+	require.NoError(t, storage.Put(ctx, rec))
 
-	err := storage.Put(ctx, record)
+	url, err := storage.Get(ctx, "id-get")
 	require.NoError(t, err)
-
-	gotURL, err := storage.Get(ctx, "test-id")
-	require.NoError(t, err)
-	assert.Equal(t, "https://example.com", gotURL)
+	assert.Equal(t, rec.URL, url)
 }
 
-// TestStorage_DeleteUserURLs tests the DeleteUserURLs method of the Storage.
-// It ensures that URLs associated with a user can be marked as deleted.
-func TestStorage_DeleteUserURLs(t *testing.T) {
+func TestStorage_Get_NotFound(t *testing.T) {
 	storage := setupTestStorage(t)
 	ctx := context.Background()
 
-	record := models.URLRecord{
-		ID:     "del-id",
-		URL:    "https://delete.com",
-		UserID: "user-456",
-	}
+	_, err := storage.Get(ctx, "unknown-id")
+	assert.ErrorIs(t, err, shared.ErrNotFound)
+}
 
-	err := storage.Put(ctx, record)
-	require.NoError(t, err)
+func TestStorage_Get_Deleted(t *testing.T) {
+	storage := setupTestStorage(t)
+	ctx := context.Background()
 
-	err = storage.DeleteUserURLs(ctx, []string{"del-id"}, "user-456")
-	require.NoError(t, err)
+	rec := models.URLRecord{ID: "id-del", URL: "https://del.com", UserID: "user-del"}
+	require.NoError(t, storage.Put(ctx, rec))
+	require.NoError(t, storage.DeleteUserURLs(ctx, []string{"id-del"}, "user-del"))
 
-	_, err = storage.Get(ctx, "del-id")
+	_, err := storage.Get(ctx, "id-del")
 	assert.ErrorIs(t, err, shared.ErrGone)
 }
 
-// TestStorage_PutBatch tests the PutBatch method of the Storage.
-// It verifies that multiple URLRecords can be stored and retrieved successfully.
 func TestStorage_PutBatch(t *testing.T) {
 	storage := setupTestStorage(t)
 	ctx := context.Background()
 
 	records := []models.URLRecord{
-		{ID: "batch1", URL: "https://batch1.com", UserID: "user-789"},
-		{ID: "batch2", URL: "https://batch2.com", UserID: "user-789"},
+		{ID: "b1", URL: "https://b1.com", UserID: "user"},
+		{ID: "b2", URL: "https://b2.com", UserID: "user"},
 	}
+	require.NoError(t, storage.PutBatch(ctx, records))
 
-	err := storage.PutBatch(ctx, records)
-	require.NoError(t, err)
+	for _, r := range records {
+		url, err := storage.Get(ctx, r.ID)
+		require.NoError(t, err)
+		assert.Equal(t, r.URL, url)
+	}
+}
 
-	gotURL1, err := storage.Get(ctx, "batch1")
-	require.NoError(t, err)
-	assert.Equal(t, "https://batch1.com", gotURL1)
+func TestStorage_DeleteUserURLs(t *testing.T) {
+	storage := setupTestStorage(t)
+	ctx := context.Background()
 
-	gotURL2, err := storage.Get(ctx, "batch2")
+	rec := models.URLRecord{ID: "to-delete", URL: "https://del.com", UserID: "u-del"}
+	require.NoError(t, storage.Put(ctx, rec))
+	require.NoError(t, storage.DeleteUserURLs(ctx, []string{"to-delete"}, "u-del"))
+
+	_, err := storage.Get(ctx, "to-delete")
+	assert.ErrorIs(t, err, shared.ErrGone)
+}
+
+func TestStorage_ListLinksByUserID(t *testing.T) {
+	storage := setupTestStorage(t)
+	ctx := context.Background()
+
+	records := []models.URLRecord{
+		{ID: "l1", URL: "http://1.com", UserID: "user-l"},
+		{ID: "l2", URL: "http://2.com", UserID: "user-l"},
+	}
+	require.NoError(t, storage.PutBatch(ctx, records))
+
+	links, err := storage.ListLinksByUserID(ctx, "http://short", "user-l")
 	require.NoError(t, err)
-	assert.Equal(t, "https://batch2.com", gotURL2)
+	assert.Len(t, links, 2)
+	assert.Contains(t, links[0].ID, "http://short/")
+}
+
+func TestStorage_ListLinksByUserID_NotFound(t *testing.T) {
+	storage := setupTestStorage(t)
+	ctx := context.Background()
+
+	_, err := storage.ListLinksByUserID(ctx, "http://short", "ghost")
+	assert.ErrorIs(t, err, shared.ErrNotFound)
+}
+
+func TestStorage_Stats(t *testing.T) {
+	storage := setupTestStorage(t)
+	ctx := context.Background()
+
+	records := []models.URLRecord{
+		{ID: "s1", URL: "https://a.com", UserID: "user1"},
+		{ID: "s2", URL: "https://b.com", UserID: "user2"},
+		{ID: "s3", URL: "https://c.com", UserID: "user1"},
+	}
+	require.NoError(t, storage.PutBatch(ctx, records))
+
+	stats, err := storage.Stats(ctx)
+	require.NoError(t, err)
+	assert.GreaterOrEqual(t, stats.Urls, 3)
+	assert.GreaterOrEqual(t, stats.Users, 2)
+}
+
+func TestStorage_Ping(t *testing.T) {
+	storage := setupTestStorage(t)
+	assert.NoError(t, storage.Ping())
+}
+
+func TestStorage_CtxCancelled(t *testing.T) {
+	storage := setupTestStorage(t)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := storage.Get(ctx, "any")
+	assert.ErrorIs(t, err, context.Canceled)
 }

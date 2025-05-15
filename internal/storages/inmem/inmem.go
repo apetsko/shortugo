@@ -102,6 +102,21 @@ func (im *Storage) DeleteUserURLs(ctx context.Context, ids []string, userID stri
 	}
 }
 
+// Stats retrieves count stats: urls and users.
+func (im *Storage) Stats(ctx context.Context) (*models.Stats, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+
+	urls := len(im.byID)
+	users := len(im.byUserID)
+
+	return &models.Stats{
+		Urls:  urls,
+		Users: users,
+	}, nil
+}
+
 // Ping checks the storage health.
 func (im *Storage) Ping() error {
 	return nil

@@ -64,7 +64,7 @@ func TestURLHandler_ShortenURL(t *testing.T) {
 	}
 
 	u := "http://localhost:8080"
-	handler := NewURLHandler(u, inmem.New(), logger, "fortytwo")
+	handler := NewURLHandler(u, inmem.New(), logger, "fortytwo", "")
 	type want struct {
 		ID   string
 		code int

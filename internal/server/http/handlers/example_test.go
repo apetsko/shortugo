@@ -17,7 +17,7 @@ import (
 func ExampleURLHandler_ShortenJSON() {
 	storage := inmem.New()
 	logger, _ := logging.New(zapcore.DebugLevel)
-	handler := NewURLHandler("http://short.url", storage, logger, "secret")
+	handler := NewURLHandler("http://short.url", storage, logger, "secret", "")
 
 	// Create a new short URL
 	body := models.URLRecord{
@@ -39,7 +39,7 @@ func ExampleURLHandler_ExpandURL() {
 	storage := inmem.New()
 	logger, _ := logging.New(zapcore.DebugLevel)
 
-	handler := NewURLHandler("http://short.url", storage, logger, "secret")
+	handler := NewURLHandler("http://short.url", storage, logger, "secret", "")
 
 	// Create a new short URL
 	body := models.URLRecord{
@@ -65,7 +65,7 @@ func ExampleURLHandler_ExpandURL() {
 func ExampleURLHandler_ListUserURLs() {
 	storage := inmem.New()
 	logger, _ := logging.New(zapcore.DebugLevel)
-	handler := NewURLHandler("http://short.url", storage, logger, "secret")
+	handler := NewURLHandler("http://short.url", storage, logger, "secret", "")
 
 	// Create new short URLs
 	urls := []models.URLRecord{
