@@ -145,3 +145,21 @@ func TestGenerateSecureCookieSecret(t *testing.T) {
 	assert.Equal(t, id1, id2)
 	assert.Len(t, id1, 32)
 }
+
+func TestAuth_CookieGetUserID_EmptyDecodedValue(t *testing.T) {
+	auth := &Auth{}
+	secret := "test_secret"
+
+	sc := securedCookie(secret)
+	encoded, err := sc.Encode("shortugo", "")
+	require.NoError(t, err)
+
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	r.AddCookie(&http.Cookie{
+		Name:  "shortugo",
+		Value: encoded,
+	})
+
+	_, err = auth.CookieGetUserID(r, secret)
+	assert.ErrorIs(t, err, errNoUserIDFound)
+}

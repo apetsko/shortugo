@@ -1,0 +1,110 @@
+edition = "2023";
+
+package shortugo;
+
+import "google/protobuf/go_features.proto";
+option features.(pb.go).api_level = API_HYBRID;
+
+option go_package = "/proto;proto";
+
+service URLShortener {
+  rpc Shorten (ShortenRequest) returns (ShortenResponse);
+  rpc ShortenJSON (ShortenRequest) returns (ShortenResponse);
+  rpc ShortenBatch (ShortenBatchRequest) returns (ShortenBatchResponse);
+  rpc Expand (ExpandRequest) returns (ExpandResponse);
+  rpc ListUserURLs (ListUserURLsRequest) returns (ListUserURLsResponse);
+  rpc DeleteUserURLs (DeleteUserURLsRequest) returns (DeleteUserURLsResponse);
+  rpc HealthCheck (HealthCheckRequest) returns (HealthCheckResponse);
+  rpc Ping (PingRequest) returns (PingResponse);
+  rpc Stats (StatsRequest) returns (StatsResponse);
+}
+
+// --- Common messages ---
+
+message URLPair {
+  string correlation_id = 1;
+  string original_url = 2;
+  string short_url = 3;
+}
+
+// --- Shorten single URL ---
+
+message ShortenRequest {
+  string original_url = 1;
+  string user_id = 2;
+}
+
+message ShortenResponse {
+  string short_url = 1;
+}
+
+// --- Expand short URL ---
+
+message ExpandRequest {
+  string short_url_id = 1;
+}
+
+message ExpandResponse {
+  string original_url = 1;
+}
+
+// --- Batch shorten ---
+
+message ShortenBatchRequest {
+  string user_id = 1;
+  repeated URLPair urls = 2;
+}
+
+message ShortenBatchResponse {
+  repeated URLPair results = 1;
+}
+
+// --- List URLs by user ---
+
+message ListUserURLsRequest {
+  string user_id = 1;
+}
+
+message ListUserURLsResponse {
+  repeated URLPair urls = 1;
+}
+
+// --- Delete URLs by user ---
+
+message DeleteUserURLsRequest {
+  string user_id = 1;
+  repeated string short_url_ids = 2;
+}
+
+message DeleteUserURLsResponse {
+  bool success = 1;
+}
+
+// --- HealthCheck ---
+
+message HealthCheckRequest {}
+
+message HealthCheckResponse {
+  string status = 1;
+}
+
+
+// --- Ping (db healthcheck) ---
+
+message PingRequest {}
+
+message PingResponse {
+  string status = 1;
+}
+
+
+// --- Stats ---
+
+message StatsRequest {
+  string ip = 1; // IP address of the client, used for trusted subnet validation
+}
+
+message StatsResponse {
+  int64 url_count = 1;
+  int64 user_count = 2;
+}
